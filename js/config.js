@@ -5,41 +5,38 @@ const CONFIG = {
   BASE_WIDTH:  1200,
   BASE_HEIGHT: 540,
 
-  // ─── Office scene background (wider than viewport for panning) ─
-  SCENE_WIDTH: 1920,         // width of office background images
-  PAN_CENTER_OFFSET: -360,   // translateX for centred view
-  PAN_RANGE: 720,            // total travel: -360 left ↔ -1080 right ??? 
-
-  // Actually: background 1920px, viewport 1200px
-  // Mouse 0% → translateX = 0   (left edge shows)
-  // Mouse 50% → translateX = -360 (centre shows)
-  // Mouse 100% → translateX = -720 (right edge shows)
+  // ─── Office scene background ──────────────────────────────────
+  SCENE_WIDTH: 1920,
   PAN_MIN: 0,
   PAN_MAX: -720,
 
   // ─── Door video positions (within 1920 px background) ─────────
-  DOOR_LEFT_X:   80,   // px from left of background image
+  DOOR_LEFT_X:   80,
   DOOR_LEFT_W:   250,
-  DOOR_RIGHT_X:  1590, // px from left of background image
+  DOOR_RIGHT_X:  1590,
   DOOR_RIGHT_W:  250,
   DOOR_HEIGHT:   540,
 
-  // ─── FNAF-1 timing (original values) ─────────────────────────
-  HOUR_MS:     89_000,  // 89 s per in-game hour (6 h ≈ 8.9 min)
-  TOTAL_HOURS: 6,       // 12 AM → 6 AM
-  AI_TICK_MS:  5_000,   // AI die roll every 5 s
-  POWER_TICK_MS: 100,   // power updates every 100 ms
+  // ─── FNAF-1 timing ────────────────────────────────────────────
+  HOUR_MS:       89_000,   // 89 s per in-game hour  → full night ≈ 8.9 min
+  TOTAL_HOURS:   6,
+  AI_TICK_MS:    4_970,    // original: 4.97 s per AI tick
+  POWER_TICK_MS: 100,
 
   // ─── Power drain (% per second) ──────────────────────────────
   DRAIN_BASE:   0.10,
-  DRAIN_DOOR:   0.25,  // per closed door
-  DRAIN_LIGHT:  0.15,  // per active light
-  DRAIN_CAMERA: 0.05,  // while cameras open
+  DRAIN_DOOR:   0.25,
+  DRAIN_LIGHT:  0.15,
+  DRAIN_CAMERA: 0.05,
 
   // ─── AI levels per night (0–20 scale) ─────────────────────────
+  // Original FNAF1 Night 1: Freddy=0, Bonnie=0, Chica=0, Foxy=1
+  // NOTE: AI level 0 = animatronic NEVER moves (correct for Freddy on N1).
+  // Bonnie/Chica bumped to 1 so the player sees some activity on Night 1;
+  // this is cosmetically close to original where Night 1 feels "calm but alive".
   AI_LEVELS: {
-    1: { freddy: 0,  bonnie: 0,  chica: 0,  foxy: 1  },
-    2: { freddy: 1,  bonnie: 3,  chica: 1,  foxy: 2  },
+    1: { freddy: 0,  bonnie: 1,  chica: 1,  foxy: 2  },
+    2: { freddy: 1,  bonnie: 3,  chica: 1,  foxy: 3  },
     3: { freddy: 5,  bonnie: 10, chica: 5,  foxy: 6  },
     4: { freddy: 10, bonnie: 12, chica: 10, foxy: 15 },
     5: { freddy: 15, bonnie: 18, chica: 13, foxy: 18 },
@@ -54,28 +51,35 @@ const CONFIG = {
 
   // ─── Attack ──────────────────────────────────────────────────
   ATTACK_ROLL_MAX: 20,
-  ATTACK_CHANCE: 0.85,       // prob of attack when at door and door open
-  ATTACK_CHECK_MS: 5_000,    // how often attack is checked
+  ATTACK_CHANCE:   0.85,
+  ATTACK_CHECK_MS: 5_000,
 
   // ─── Freddy special ──────────────────────────────────────────
-  FREDDY_UNOBSERVED_ONLY: true,   // can't move while player watches him on cam
-  FREDDY_LAUGH_MIN_NIGHT: 3,
-  FREDDY_POWER_MUSIC_MS: 10_000,  // Toreador march before enter
-  FREDDY_POWER_ENTER_MS: 5_000,   // extra delay before jumpscare
+  FREDDY_UNOBSERVED_ONLY:  true,
+  FREDDY_LAUGH_MIN_NIGHT:  3,
+  FREDDY_POWER_MUSIC_MS:   10_000,
+  FREDDY_POWER_ENTER_MS:   5_000,
 
-  // ─── Foxy ────────────────────────────────────────────────────
-  FOXY_PHASE_INTERVAL: 15,   // seconds without watching before phase advances
-  FOXY_TIMER_MAX: 60,        // total seconds → starts running
-  FOXY_DECAY_RATE: 1.5,      // timer decay per second while watching
+  // ─── Foxy (reworked — slower, more forgiving) ─────────────────
+  // Phase intervals: how many "not-watching seconds" advance each phase.
+  // Total to reach phase 3 = 3 × FOXY_PHASE_INTERVAL = 60 s
+  FOXY_PHASE_INTERVAL:     20,    // was 15 — each phase takes longer
+  FOXY_TIMER_MAX:          90,    // was 60 — longer before the run
+  // Decay: how many timer-seconds are removed per real second while watching.
+  // 0.3 means watching CAM 1C for 10 s only removes 3 s of progress.
+  // Keeps the "you must keep checking" tension without instant reset.
+  FOXY_DECAY_RATE:         0.3,   // was 1.5 — much gentler rollback
+  FOXY_SPEED_BASE:         0.4,   // base phase-timer increment per second (aiLevel 0)
+  FOXY_SPEED_PER_LEVEL:    0.015, // additional increment per aiLevel point
   FOXY_CHARGE_DURATION_MS: 2_500,
-  FOXY_KNOCK_POWER: 1,       // % power lost per knock
+  FOXY_KNOCK_POWER:        1,     // % power lost per knock
 
   // ─── Door animation (video time in seconds) ──────────────────
-  DOOR_CLOSE_FRAME: 0.8,
-  DOOR_OPEN_FRAME:  2.0,
+  DOOR_CLOSE_FRAME: 0.8,   // pause at 1 s → door fully closed
+  DOOR_OPEN_FRAME:  2.0,   // pause at 2 s → door fully open
 
   // ─── Camera system ────────────────────────────────────────────
-  STATIC_DURATION_MS: 300,
+  STATIC_DURATION_MS:     300,
   CAM_FLICKER_INTERVAL_MS: 8_000,
 
   // ─── Night intro display ─────────────────────────────────────
@@ -97,15 +101,15 @@ const CONFIG = {
     { id: '1B', label: 'CAM 1B', name: 'Dining Area'       },
     { id: '1C', label: 'CAM 1C', name: 'Pirate Cove'       },
     { id: '2A', label: 'CAM 2A', name: 'West Hall'         },
-    { id: '2B', label: 'CAM 2B', name: 'West Hall Corner'  },
+    { id: '2B', label: 'CAM 2B', name: 'W.Hall Corner'     },
     { id: '3',  label: 'CAM 3',  name: 'Supply Closet'     },
     { id: '4A', label: 'CAM 4A', name: 'East Hall'         },
-    { id: '4B', label: 'CAM 4B', name: 'East Hall Corner'  },
+    { id: '4B', label: 'CAM 4B', name: 'E.Hall Corner'     },
     { id: '5',  label: 'CAM 5',  name: 'Backstage'         },
     { id: '6',  label: 'CAM 6',  name: 'Kitchen'           },
   ],
 
-  // Camera → animatronic positions visible
+  // Camera → animatronic positions visible (used to freeze Freddy when watched)
   CAM_POSITIONS: {
     '1A': ['STAGE'],
     '1B': ['DINING'],

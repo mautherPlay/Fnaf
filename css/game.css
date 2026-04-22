@@ -535,3 +535,67 @@ html, body {
   cursor: default;
   pointer-events: none;
 }
+/* ═══════════════════════════════════════════════════════════════
+   game.css PATCH — additions / corrections only
+   Append this to the bottom of your existing css/game.css,
+   OR replace the full file with these rules included.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Kitchen "CAMERA DISABLED" overlay ─────────────────────── */
+#cam-kitchen-disabled {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none;          /* shown by SceneRenderer when CAM 6 active */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 5;
+}
+
+.kitchen-icon {
+  font-size: 32px;
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.kitchen-title {
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: #3a6a3a;
+  text-transform: uppercase;
+}
+
+.kitchen-sub {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #2a4a2a;
+  text-transform: uppercase;
+}
+
+/* Blinking cursor on the label for atmosphere */
+.kitchen-title::after {
+  content: '_';
+  animation: blink-cursor 1.2s step-end infinite;
+}
+@keyframes blink-cursor { 50% { opacity: 0; } }
+
+/* ── Foxy peek video overlay ────────────────────────────────── */
+#foxy-peek-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none;          /* shown by SceneRenderer._startFoxyPeek() */
+  align-items: center;
+  justify-content: center;
+  z-index: 95;            /* above power-out (6) and camera (5), below jumpscare (100) */
+}
+
+#foxy-peek-video {
+  width:  1200px;
+  height: 540px;
+  object-fit: cover;
+}
