@@ -1,1 +1,194 @@
-// game.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Five Nights at Freddy's</title>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+
+  <!-- ══ Portrait lock (mobile) ══════════════════════════════ -->
+  <div id="rotate-prompt">
+    <div class="rotate-icon">📱</div>
+    <p>Please rotate your device to landscape</p>
+  </div>
+
+  <!-- ══ Scale wrapper — centres & scales the 1200×540 game ══ -->
+  <div id="scale-wrapper">
+    <div id="game-container">
+
+      <!-- ════════════════════════════════════════════════════
+           OFFICE VIEW  (SceneRenderer controls display)
+      ════════════════════════════════════════════════════ -->
+      <div id="office-view">
+
+        <!-- Pannable background — 1920 px wide, translateX via JS -->
+        <div id="scene-background">
+
+          <!-- Single state-scene image -->
+          <img id="scene-image" src="" alt="" draggable="false">
+
+          <!-- Left door video overlay
+               Visibility toggled by OfficeSystem (hidden when OPEN) -->
+          <video id="door-left-video"
+            preload="auto" muted playsinline
+            style="position:absolute;top:0;left:80px;
+                   width:250px;height:540px;object-fit:fill;
+                   z-index:10;visibility:hidden;">
+          </video>
+
+          <!-- Right door video overlay -->
+          <video id="door-right-video"
+            preload="auto" muted playsinline
+            style="position:absolute;top:0;left:1590px;
+                   width:250px;height:540px;object-fit:fill;
+                   z-index:10;visibility:hidden;">
+          </video>
+
+          <!-- ── Left button panel ──────────────────────────
+               Container at bg-x:0, bg-y:190 (60 × 160 px)
+               Buttons are invisible hitboxes over the panel image -->
+          <div id="panel-left-container" class="panel-container">
+            <img id="panel-left-img" src="" alt="" draggable="false" class="panel-img">
+            <div id="btn-left-door"  class="panel-btn" data-side="left"  data-action="door"></div>
+            <div id="btn-left-light" class="panel-btn" data-side="left"  data-action="light"></div>
+          </div>
+
+          <!-- ── Right button panel ─────────────────────────
+               Container at bg-x:1834, bg-y:190 (60 × 160 px) -->
+          <div id="panel-right-container" class="panel-container">
+            <img id="panel-right-img" src="" alt="" draggable="false" class="panel-img">
+            <div id="btn-right-door"  class="panel-btn" data-side="right" data-action="door"></div>
+            <div id="btn-right-light" class="panel-btn" data-side="right" data-action="light"></div>
+          </div>
+
+        </div><!-- /scene-background -->
+      </div><!-- /office-view -->
+
+      <!-- ════════════════════════════════════════════════════
+           CAMERA VIEW  (SceneRenderer controls display:none/block)
+      ════════════════════════════════════════════════════ -->
+      <div id="camera-view" style="display:none">
+
+        <div id="cam-monitor">
+
+          <!-- Main camera screen -->
+          <div id="cam-screen-wrap">
+            <img id="camera-image" src="" alt="" draggable="false">
+            <!-- CRT scanline overlay -->
+            <div id="cam-scanlines"></div>
+            <!-- Static noise — class 'active' added by SceneRenderer.showStatic() -->
+            <div id="camera-static"></div>
+            <!-- Label bar -->
+            <div id="cam-label-bar">
+              <span id="cam-label-text">CAM 1A - SHOW STAGE</span>
+              <span id="cam-rec">● REC</span>
+            </div>
+          </div>
+
+          <!-- Right panel: location map + camera buttons -->
+          <div id="cam-panel">
+            <div id="cam-map-label">LOCATION SELECT</div>
+            <!-- Buttons generated dynamically by UIManager.init() -->
+            <div id="cam-buttons-container"></div>
+          </div>
+
+        </div><!-- /cam-monitor -->
+
+        <!-- Lower-monitor handle -->
+        <div id="cam-close-handle">
+          <span>▼ LOWER MONITOR</span>
+        </div>
+
+      </div><!-- /camera-view -->
+
+      <!-- ════════════════════════════════════════════════════
+           POWER-OUT VIEW  (SceneRenderer controls display)
+      ════════════════════════════════════════════════════ -->
+      <div id="power-out-view" style="display:none">
+        <img id="power-out-image" src="" alt="" draggable="false">
+      </div>
+
+      <!-- ════════════════════════════════════════════════════
+           HUD  (UIManager shows/hides via onPhaseChange)
+      ════════════════════════════════════════════════════ -->
+      <div id="hud" style="display:none">
+
+        <!-- Top-right: night + clock -->
+        <div id="hud-top-right">
+          <div id="night-display">Night 1</div>
+          <div id="time-display">12 AM</div>
+        </div>
+
+        <!-- Bottom-left: power -->
+        <div id="hud-bottom-left">
+          <div id="power-label">Power left: <span id="power-pct">100</span>%</div>
+          <div id="power-usage-line">Usage: <span id="power-bars">■□□□□□</span></div>
+        </div>
+
+      </div><!-- /hud -->
+
+      <!-- Camera raise handle (visible in OFFICE phase) -->
+      <div id="cam-toggle-handle" style="display:none">
+        <span>▲ MONITOR</span>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════
+           OVERLAYS  (highest z-indices)
+      ════════════════════════════════════════════════════ -->
+
+      <!-- Jumpscare — SceneRenderer sets display:flex / display:none -->
+      <div id="jumpscare-overlay" style="display:none">
+        <video id="jumpscare-video" preload="auto" muted playsinline></video>
+      </div>
+
+      <!-- Night intro — main.js controls -->
+      <div id="night-intro-overlay" style="display:none">
+        <div id="night-intro-text">Night 1</div>
+      </div>
+
+      <!-- Game Over — UIManager.showGameOver() -->
+      <div id="gameover-overlay" style="display:none">
+        <div id="gameover-content">
+          <div id="gameover-title">GAME OVER</div>
+          <div id="gameover-sub">You were caught by <span id="gameover-who">an animatronic</span>.</div>
+          <div id="gameover-buttons">
+            <button id="btn-retry">TRY AGAIN</button>
+            <button id="btn-menu-go">MENU</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Night Win — UIManager.showWin() -->
+      <div id="win-overlay" style="display:none">
+        <div id="win-content">
+          <div id="win-title">6 AM</div>
+          <div id="win-sub">You survived the night!</div>
+          <div id="win-buttons">
+            <button id="btn-next-night">NEXT NIGHT</button>
+            <button id="btn-win-menu">MENU</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /game-container -->
+  </div><!-- /scale-wrapper -->
+
+  <!-- ══ Scripts (load order is critical) ═══════════════════ -->
+  <script src="js/config.js"></script>
+  <script src="js/EventBus.js"></script>
+  <script src="js/GameState.js"></script>
+  <script src="js/SaveSystem.js"></script>
+  <script src="js/SoundSystem.js"></script>
+  <script src="js/NightSystem.js"></script>
+  <script src="js/PowerSystem.js"></script>
+  <script src="js/AnimatronicAI.js"></script>
+  <script src="js/CameraSystem.js"></script>
+  <script src="js/OfficeSystem.js"></script>
+  <script src="js/SceneRenderer.js"></script>
+  <script src="js/UIManager.js"></script>
+  <script src="js/InputSystem.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

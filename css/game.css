@@ -1,1 +1,537 @@
-/* game.css */
+/* ═══════════════════════════════════════════════════════════════
+   game.css — Five Nights at Freddy's Browser Edition
+   Base resolution: 1200 × 540
+   Responsive: JS scales #game-container via transform:scale()
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: 'Courier New', Courier, monospace;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ── Rotate prompt (portrait mobile) ───────────────────────── */
+#rotate-prompt {
+  display: none;
+  position: fixed; inset: 0;
+  background: #000;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  color: #aaa;
+  text-align: center;
+  gap: 16px;
+}
+.rotate-icon { font-size: 52px; }
+#rotate-prompt p { font-size: 16px; letter-spacing: 1px; }
+
+@media (orientation: portrait) and (max-width: 900px) {
+  #rotate-prompt { display: flex; }
+}
+
+/* ── Scale wrapper — centres the game ──────────────────────── */
+#scale-wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  overflow: hidden;
+}
+
+/* ── Game container — 1200 × 540 fixed, scaled by JS ─────── */
+#game-container {
+  position: relative;
+  width:  1200px;
+  height: 540px;
+  overflow: hidden;
+  background: #000;
+  transform-origin: center center;
+  /* DO NOT add transform here — JS sets it dynamically */
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OFFICE VIEW
+═══════════════════════════════════════════════════════════ */
+#office-view {
+  position: absolute;
+  top: 0; left: 0;
+  width: 1200px; height: 540px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* ── Pannable background (1920 px wide) ───────────────────── */
+#scene-background {
+  position: absolute;
+  top: 0; left: 0;
+  width:  1920px;
+  height: 540px;
+  will-change: transform;
+  /* No CSS transition — lerp in JS gives smooth pan */
+}
+
+/* State-scene image fills the whole background */
+#scene-image {
+  position: absolute;
+  top: 0; left: 0;
+  width:  1920px;
+  height: 540px;
+  object-fit: fill;
+  display: block;
+  pointer-events: none;
+}
+
+/* ── Door videos ─────────────────────────────────────────── */
+/* Positioned inline in HTML at exact pixel offsets:
+   left door  → left: 80px
+   right door → left: 1590px                                */
+
+/* ── Button panels ────────────────────────────────────────── */
+/* Panels are children of #scene-background so they pan with it.
+   Pixel positions computed from CONFIG.PANELS × base resolution:
+     left  container: bg-x=0,    bg-y=190px, 60×160 px
+     right container: bg-x=1834, bg-y=190px, 60×160 px     */
+
+.panel-container {
+  position: absolute;
+  top: 190px;
+  width:  60px;
+  height: 160px;
+  z-index: 20;
+}
+
+#panel-left-container  { left:    0px; }
+#panel-right-container { left: 1834px; }
+
+.panel-img {
+  display: block;
+  width:  100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Invisible button hitboxes — positions from CONFIG.PANELS
+   relative to their 60×160 container:
+
+   Left door  btn: x=19, y=34, w=29, h=36
+   Left light btn: x=18, y=86, w=27, h=34
+   Right door  btn: x=14, y=32, w=28, h=38
+   Right light btn: x=14, y=86, w=28, h=35         */
+
+.panel-btn {
+  position: absolute;
+  cursor: pointer;
+  z-index: 21;
+  /* Debug outline — remove when assets are placed: */
+  /* outline: 1px solid rgba(255,0,0,0.4); */
+}
+
+#btn-left-door   { left: 19px; top: 34px; width: 29px; height: 36px; }
+#btn-left-light  { left: 18px; top: 86px; width: 27px; height: 34px; }
+#btn-right-door  { left: 14px; top: 32px; width: 28px; height: 38px; }
+#btn-right-light { left: 14px; top: 86px; width: 28px; height: 35px; }
+
+/* ═══════════════════════════════════════════════════════════
+   CAMERA VIEW
+═══════════════════════════════════════════════════════════ */
+#camera-view {
+  position: absolute;
+  top: 0; left: 0;
+  width:  1200px;
+  height: 540px;
+  background: #000;
+  z-index: 5;
+  /* display controlled by SceneRenderer (none / block) */
+}
+
+/* Monitor frame */
+#cam-monitor {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  width:  1120px;
+  height: 500px;
+  background: #050f05;
+  border: 3px solid #1e4a1e;
+  box-shadow: 0 0 30px rgba(0,80,0,0.4), inset 0 0 20px rgba(0,0,0,0.8);
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* Main screen area */
+#cam-screen-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid #143a14;
+}
+
+#camera-image {
+  display: block;
+  width:  100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.85) saturate(0.6) hue-rotate(10deg);
+}
+
+/* CRT scanlines */
+#cam-scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(0,0,0,0.18) 3px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Static noise overlay */
+#camera-static {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.04s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+#camera-static.active {
+  opacity: 0.9;
+  animation: static-shift 0.06s steps(1) infinite;
+}
+@keyframes static-shift {
+  0%   { background-position:   0px   0px; }
+  25%  { background-position: -60px  40px; }
+  50%  { background-position:  80px -30px; }
+  75%  { background-position: -20px  70px; }
+  100% { background-position:  40px -50px; }
+}
+
+/* Camera label bar */
+#cam-label-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 26px;
+  background: rgba(0, 30, 0, 0.75);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  z-index: 4;
+  border-top: 1px solid #1e4a1e;
+}
+#cam-label-text {
+  color: #7dff7d;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+#cam-rec {
+  color: #ff4444;
+  font-size: 11px;
+  letter-spacing: 1px;
+  animation: rec-blink 1s step-end infinite;
+}
+@keyframes rec-blink { 50% { opacity: 0; } }
+
+/* Right side panel (buttons) */
+#cam-panel {
+  width: 210px;
+  background: #040c04;
+  border: 2px solid #143a14;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#cam-map-label {
+  color: #4a9a4a;
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-align: center;
+  text-transform: uppercase;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #1e4a1e;
+  margin-bottom: 4px;
+}
+
+#cam-buttons-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  flex: 1;
+  align-content: start;
+}
+
+.cam-btn {
+  background: #080f08;
+  border: 1px solid #1e4a1e;
+  color: #5abf5a;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  padding: 5px 3px;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.5;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  letter-spacing: 0.5px;
+}
+.cam-btn:hover {
+  background: #122012;
+  color: #9fff9f;
+  border-color: #3a7a3a;
+}
+.cam-btn.active {
+  background: #183018;
+  color: #ccffcc;
+  border-color: #5abf5a;
+  box-shadow: 0 0 6px rgba(90,190,90,0.35);
+}
+.cam-btn-id {
+  display: block;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* Close handle */
+#cam-close-handle {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 32px 6px;
+  background: #0a150a;
+  border: 2px solid #1e4a1e;
+  border-bottom: none;
+  cursor: pointer;
+  z-index: 10;
+}
+#cam-close-handle span {
+  color: #5abf5a;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+#cam-close-handle:hover span { color: #9fff9f; }
+
+/* ═══════════════════════════════════════════════════════════
+   POWER-OUT VIEW
+═══════════════════════════════════════════════════════════ */
+#power-out-view {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 6;
+  /* display controlled by SceneRenderer */
+}
+#power-out-image {
+  width:  1200px;
+  height: 540px;
+  object-fit: cover;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HUD
+═══════════════════════════════════════════════════════════ */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 25;
+  /* display toggled by UIManager */
+}
+
+#hud-top-right {
+  position: absolute;
+  top: 14px;
+  right: 22px;
+  text-align: right;
+}
+#night-display {
+  color: #aaa;
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-bottom: 3px;
+}
+#time-display {
+  color: #fff;
+  font-size: 24px;
+  letter-spacing: 3px;
+}
+
+#hud-bottom-left {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+}
+#power-label, #power-usage-line {
+  color: #ccc;
+  font-size: 12px;
+  margin-bottom: 3px;
+  letter-spacing: 1px;
+}
+#power-pct   { color: #fff; font-weight: bold; }
+#power-bars  { color: #7dff7d; letter-spacing: 3px; }
+
+/* ── Camera raise handle (OFFICE mode) ─────────────────────── */
+#cam-toggle-handle {
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 32px 6px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 2px solid #1e4a1e;
+  border-bottom: none;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 30;
+  /* display toggled by UIManager */
+}
+#cam-toggle-handle span {
+  color: #5abf5a;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+#cam-toggle-handle:hover span { color: #9fff9f; }
+
+/* ═══════════════════════════════════════════════════════════
+   OVERLAYS  (always on top while active)
+═══════════════════════════════════════════════════════════ */
+
+/* Jumpscare — SceneRenderer: display:flex / display:none */
+#jumpscare-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  /* display toggled by SceneRenderer */
+}
+#jumpscare-video {
+  width:  1200px;
+  height: 540px;
+  object-fit: cover;
+}
+
+/* Night intro */
+#night-intro-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+#night-intro-text {
+  color: #888;
+  font-size: 40px;
+  letter-spacing: 12px;
+  text-transform: uppercase;
+  animation: intro-fade 4s ease forwards;
+}
+@keyframes intro-fade {
+  0%   { opacity: 0; transform: scale(0.97); }
+  25%  { opacity: 1; transform: scale(1);    }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Game-over screen */
+#gameover-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+}
+#gameover-content { text-align: center; }
+#gameover-title {
+  color: #cc2222;
+  font-size: 52px;
+  letter-spacing: 8px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px rgba(200,30,30,0.6);
+}
+#gameover-sub {
+  color: #777;
+  font-size: 14px;
+  letter-spacing: 1px;
+  margin-bottom: 36px;
+}
+#gameover-who { color: #cc4444; }
+#gameover-buttons { display: flex; gap: 16px; justify-content: center; }
+
+/* Win screen */
+#win-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+}
+#win-content { text-align: center; }
+#win-title {
+  color: #ddb040;
+  font-size: 64px;
+  letter-spacing: 12px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 30px rgba(220,180,60,0.5);
+}
+#win-sub {
+  color: #777;
+  font-size: 14px;
+  letter-spacing: 1px;
+  margin-bottom: 36px;
+}
+#win-buttons { display: flex; gap: 16px; justify-content: center; }
+
+/* Shared overlay buttons */
+#gameover-overlay button,
+#win-overlay button {
+  background: #0d0d0d;
+  border: 2px solid #444;
+  color: #bbb;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 12px 28px;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+#gameover-overlay button:hover,
+#win-overlay button:hover {
+  border-color: #888;
+  color: #fff;
+  background: #1a1a1a;
+}
+#gameover-overlay button:disabled,
+#win-overlay button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}

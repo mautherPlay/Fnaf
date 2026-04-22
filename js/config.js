@@ -71,7 +71,7 @@ const CONFIG = {
   FOXY_KNOCK_POWER: 1,       // % power lost per knock
 
   // ─── Door animation (video time in seconds) ──────────────────
-  DOOR_CLOSE_FRAME: 1.0,
+  DOOR_CLOSE_FRAME: 0.8,
   DOOR_OPEN_FRAME:  2.0,
 
   // ─── Camera system ────────────────────────────────────────────
