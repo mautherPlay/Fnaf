@@ -3,74 +3,70 @@
 /**
  * UIManager
  * ─────────────────────────────────────────────────────────────
- * Manages all DOM elements that display game state:
- *   • HUD (time, power, night number)
- *   • Camera button panel (dynamic, from CONFIG.CAMERAS)
- *   • Phase-based overlay visibility
- *   • Game-over / win screens
+ * Drives the single HUD overlay (#hud) that sits on top of
+ * BOTH office and camera views (z-index 25).
+ * The camera view no longer has its own power/time readout —
+ * the shared HUD handles everything.
  *
- * All updates are event-driven (via EventBus).
- * update() exists for any per-frame needs but is currently no-op.
+ * Bug fix: removed _updateCamHud() and the per-frame cam-power /
+ * cam-clock / cam-night-label updates that caused duplicate readouts.
  */
 class UIManager {
   constructor(state, powerSystem, cameraSystem) {
     this.state  = state;
     this.power  = powerSystem;
     this.camera = cameraSystem;
+    this._goAudio = null;
   }
 
-  // ── Called once after DOM is ready ──────────────────────────
   init() {
-    this._buildCameraButtons();
+    this._buildMinimapListeners();
     this._bindOverlayButtons();
     this._bindEventBus();
-    // Set initial state in UI
-    this.highlightCamBtn(this.state.activeCam);
     this.updateTime(0);
     this.updatePower(100);
+
+    // Ensure trigger zones start in correct state
+    const ot = document.getElementById('office-trigger-zone');
+    const ct = document.getElementById('cam-trigger-zone');
+    if (ot) ot.style.display = 'none';  // shown when phase = OFFICE
+    if (ct) ct.style.display = 'none';  // shown when phase = CAMERA
   }
 
-  // ── Per-frame (currently no-op — everything is event-driven) ─
-  update() {}
-
-  // ════════════════════════════════════════════════════════════
-  // CAMERA BUTTONS
-  // ════════════════════════════════════════════════════════════
-  _buildCameraButtons() {
-    const container = document.getElementById('cam-buttons-container');
-    if (!container) return;
-    container.innerHTML = '';
-
-    CONFIG.CAMERAS.forEach(cam => {
-      const btn = document.createElement('button');
-      btn.className   = 'cam-btn';
-      btn.id          = `cam-btn-${cam.id}`;
-      btn.dataset.camId = cam.id;
-      // Two lines: "CAM 1A" (bold) + short room name
-      btn.innerHTML   = `<span class="cam-btn-id">${cam.label}</span>${cam.name}`;
-      btn.addEventListener('click', () => {
-        this.camera.switchTo(cam.id);
-      });
-      container.appendChild(btn);
-    });
-  }
-
-  /** Highlight the active camera button; update the label bar */
-  highlightCamBtn(camId) {
-    document.querySelectorAll('.cam-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.camId === camId);
-    });
-
-    const def   = CONFIG.CAMERAS.find(c => c.id === camId);
-    const label = document.getElementById('cam-label-text');
-    if (def && label) {
-      label.textContent = `${def.label} - ${def.name.toUpperCase()}`;
+  // ── Per-frame: only update minimap active node ────────────────
+  update() {
+    if (this.state.cameraOpen && this.state.phase === 'CAMERA') {
+      this._highlightMapNode(this.state.activeCam);
+      // Update room name (cheap text write)
+      this._updateRoomName(this.state.activeCam);
     }
   }
 
-  // ════════════════════════════════════════════════════════════
-  // HUD UPDATES
-  // ════════════════════════════════════════════════════════════
+  // ── Room name in camera top-centre ───────────────────────────
+  _updateRoomName(camId) {
+    const def    = CONFIG.CAMERAS.find(c => c.id === camId);
+    const nameEl = document.getElementById('cam-room-name');
+    if (nameEl && def) nameEl.textContent = def.name.toUpperCase();
+  }
+
+  // ── Minimap active highlight ──────────────────────────────────
+  _highlightMapNode(camId) {
+    document.querySelectorAll('.map-node').forEach(g => {
+      g.classList.toggle('map-active', g.dataset.cam === camId);
+    });
+  }
+
+  // Make minimap nodes clickable
+  _buildMinimapListeners() {
+    document.querySelectorAll('.map-node').forEach(g => {
+      g.addEventListener('click', () => {
+        const id = g.dataset.cam;
+        if (id && this.state.cameraOpen) this.camera.switchTo(id);
+      });
+    });
+  }
+
+  // ── HUD updates (shared, always-on-top) ──────────────────────
   updateTime(hour) {
     const el = document.getElementById('time-display');
     if (el) el.textContent = CONFIG.HOUR_LABELS[hour] ?? '12 AM';
@@ -79,41 +75,35 @@ class UIManager {
   updatePower(power) {
     const pctEl  = document.getElementById('power-pct');
     const barsEl = document.getElementById('power-bars');
-
-    if (pctEl)  pctEl.textContent  = Math.ceil(power);
-
+    if (pctEl) pctEl.textContent = Math.ceil(power);
     if (barsEl) {
-      const devices = this.power.getActiveDevices(); // 1–6
-      const TOTAL   = 6;
-      const filled  = Math.min(devices, TOTAL);
-      barsEl.textContent = '■'.repeat(filled) + '□'.repeat(TOTAL - filled);
-
-      // Colour shift: green → amber → red as power depletes
-      if (power > 50) {
-        barsEl.style.color = '#7dff7d';
-      } else if (power > 20) {
-        barsEl.style.color = '#ffd060';
-        if (pctEl) pctEl.style.color = '#ffd060';
-      } else {
-        barsEl.style.color = '#ff6060';
-        if (pctEl) pctEl.style.color = '#ff6060';
-      }
+      const filled = Math.min(this.power.getActiveDevices(), 6);
+      barsEl.innerHTML = '&#x25AE;'.repeat(filled) + '&#x25AF;'.repeat(6 - filled);
+      if (power > 50)      { barsEl.style.color = '#7dff7d'; if(pctEl) pctEl.style.color = '#fff'; }
+      else if (power > 20) { barsEl.style.color = '#ffd060'; if(pctEl) pctEl.style.color = '#ffd060'; }
+      else                 { barsEl.style.color = '#ff6060'; if(pctEl) pctEl.style.color = '#ff6060'; }
     }
   }
 
-  // ════════════════════════════════════════════════════════════
-  // PHASE MANAGEMENT
-  // ════════════════════════════════════════════════════════════
+  // ── Phase management ─────────────────────────────────────────
   onPhaseChange(phase) {
-    const hud    = document.getElementById('hud');
-    const toggle = document.getElementById('cam-toggle-handle');
+    const hud = document.getElementById('hud');
+    const ot  = document.getElementById('office-trigger-zone');
+    const ct  = document.getElementById('cam-trigger-zone');
+    const isPlay = phase === 'OFFICE' || phase === 'CAMERA';
 
-    const isPlaying = phase === 'OFFICE' || phase === 'CAMERA';
+    if (hud) hud.style.display = isPlay ? 'block' : 'none';
 
-    // Show HUD only while playing
-    if (hud)    hud.style.display    = isPlaying ? 'block' : 'none';
-    // Camera raise handle only in office mode
-    if (toggle) toggle.style.display = (phase === 'OFFICE') ? 'flex' : 'none';
+    if (phase === 'OFFICE') {
+      if (ot) ot.style.display = 'flex';
+      if (ct) ct.style.display = 'none';
+    } else if (phase === 'CAMERA') {
+      if (ot) ot.style.display = 'none';
+      if (ct) ct.style.display = 'flex';
+    } else {
+      if (ot) ot.style.display = 'none';
+      if (ct) ct.style.display = 'none';
+    }
   }
 
   onNightStarted(night) {
@@ -121,71 +111,80 @@ class UIManager {
     if (nd) nd.textContent = `Night ${night}`;
     this.updateTime(0);
     this.updatePower(100);
-    // Reset power bar colour
     const pctEl  = document.getElementById('power-pct');
     const barsEl = document.getElementById('power-bars');
     if (pctEl)  pctEl.style.color  = '#fff';
     if (barsEl) barsEl.style.color = '#7dff7d';
+    this._stopGoMusic();
   }
 
-  // ════════════════════════════════════════════════════════════
-  // GAME OVER / WIN SCREENS
-  // ════════════════════════════════════════════════════════════
+  // ── Game Over ────────────────────────────────────────────────
   showGameOver(who) {
     const overlay = document.getElementById('gameover-overlay');
-    const whoEl   = document.getElementById('gameover-who');
     const hud     = document.getElementById('hud');
-    const toggle  = document.getElementById('cam-toggle-handle');
+    const ot      = document.getElementById('office-trigger-zone');
+    const ct      = document.getElementById('cam-trigger-zone');
 
-    if (whoEl)   whoEl.textContent   = who || 'an animatronic';
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay) overlay.style.display = 'block';
     if (hud)     hud.style.display     = 'none';
-    if (toggle)  toggle.style.display  = 'none';
+    if (ot)      ot.style.display      = 'none';
+    if (ct)      ct.style.display      = 'none';
+
+    this._playGoMusic();
   }
 
+  _playGoMusic() {
+    this._stopGoMusic();
+    this._goAudio = new Audio('assets/sounds/gameover_music.mp3');
+    this._goAudio.volume = 0.8;
+    this._goAudio.play().catch(() => {});
+  }
+  _stopGoMusic() {
+    if (this._goAudio) { this._goAudio.pause(); this._goAudio = null; }
+  }
+
+  // ── Win ──────────────────────────────────────────────────────
   showWin(night) {
-    const overlay  = document.getElementById('win-overlay');
-    const subEl    = document.getElementById('win-sub');
-    const nextBtn  = document.getElementById('btn-next-night');
-    const hud      = document.getElementById('hud');
-    const toggle   = document.getElementById('cam-toggle-handle');
+    const overlay = document.getElementById('win-overlay');
+    const subEl   = document.getElementById('win-sub');
+    const nextBtn = document.getElementById('btn-next-night');
+    const hud     = document.getElementById('hud');
+    const ot      = document.getElementById('office-trigger-zone');
+    const ct      = document.getElementById('cam-trigger-zone');
 
     if (subEl)   subEl.textContent     = `Night ${night} complete!`;
     if (nextBtn) nextBtn.disabled      = (night >= 5);
     if (overlay) overlay.style.display = 'flex';
     if (hud)     hud.style.display     = 'none';
-    if (toggle)  toggle.style.display  = 'none';
+    if (ot)      ot.style.display      = 'none';
+    if (ct)      ct.style.display      = 'none';
   }
 
-  // ════════════════════════════════════════════════════════════
-  // EVENT BUS BINDINGS
-  // ════════════════════════════════════════════════════════════
+  // ── EventBus ─────────────────────────────────────────────────
   _bindEventBus() {
-    EventBus.on('phaseChange',    (p)   => this.onPhaseChange(p));
-    EventBus.on('hourChanged',    (h)   => this.updateTime(h));
-    EventBus.on('powerChanged',   (p)   => this.updatePower(p));
-    EventBus.on('nightStarted',   (n)   => this.onNightStarted(n));
-    EventBus.on('cameraSwitched', (id)  => this.highlightCamBtn(id));
-    EventBus.on('gameOver',       (who) => this.showGameOver(who));
-    EventBus.on('nightComplete',  (n)   => this.showWin(n));
+    EventBus.on('phaseChange',    p  => this.onPhaseChange(p));
+    EventBus.on('hourChanged',    h  => this.updateTime(h));
+    EventBus.on('powerChanged',   p  => this.updatePower(p));
+    EventBus.on('nightStarted',   n  => this.onNightStarted(n));
+    EventBus.on('cameraSwitched', id => {
+      this._highlightMapNode(id);
+      this._updateRoomName(id);
+    });
+    EventBus.on('gameOver',      w  => this.showGameOver(w));
+    EventBus.on('nightComplete', n  => this.showWin(n));
   }
 
-  // ════════════════════════════════════════════════════════════
-  // OVERLAY BUTTON HANDLERS
-  // ════════════════════════════════════════════════════════════
+  // ── Overlay buttons ──────────────────────────────────────────
   _bindOverlayButtons() {
-    const $ = (id) => document.getElementById(id);
-
-    // Game-over buttons
-    const retry  = $('btn-retry');
-    const menuGo = $('btn-menu-go');
-    if (retry)  retry.addEventListener( 'click', () => EventBus.emit('retryNight'));
-    if (menuGo) menuGo.addEventListener('click', () => { window.location.href = 'index.html'; });
-
-    // Win buttons
+    const $ = id => document.getElementById(id);
+    const retry   = $('btn-retry');
+    const menuGo  = $('btn-menu-go');
     const next    = $('btn-next-night');
     const winMenu = $('btn-win-menu');
-    if (next)    next.addEventListener(   'click', () => EventBus.emit('nextNight'));
+
+    if (retry)   retry.addEventListener('click',   () => { this._stopGoMusic(); EventBus.emit('retryNight'); });
+    if (menuGo)  menuGo.addEventListener('click',  () => { this._stopGoMusic(); window.location.href = 'index.html'; });
+    if (next)    next.addEventListener('click',    () => EventBus.emit('nextNight'));
     if (winMenu) winMenu.addEventListener('click', () => { window.location.href = 'index.html'; });
   }
 }

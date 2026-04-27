@@ -1,601 +1,295 @@
 /* ═══════════════════════════════════════════════════════════════
-   game.css — Five Nights at Freddy's Browser Edition
-   Base resolution: 1200 × 540
-   Responsive: JS scales #game-container via transform:scale()
+   game.css — Five Nights at Freddy's — In-Game  1200 × 540
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Reset ─────────────────────────────────────────────────── */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 
-html, body {
-  width: 100%; height: 100%;
-  background: #000;
-  overflow: hidden;
-  font-family: 'Courier New', Courier, monospace;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
+html,body{
+  width:100%;height:100%;background:#000;overflow:hidden;
+  font-family:'Courier New',Courier,monospace;
+  -webkit-tap-highlight-color:transparent;user-select:none;
 }
 
-/* ── Rotate prompt (portrait mobile) ───────────────────────── */
-#rotate-prompt {
-  display: none;
-  position: fixed; inset: 0;
-  background: #000;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  color: #aaa;
-  text-align: center;
-  gap: 16px;
+#rotate-prompt{
+  display:none;position:fixed;inset:0;background:#000;
+  flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;color:#aaa;text-align:center;gap:16px;
 }
-.rotate-icon { font-size: 52px; }
-#rotate-prompt p { font-size: 16px; letter-spacing: 1px; }
+.rotate-icon{font-size:52px;}
+@media (orientation:portrait) and (max-width:900px){#rotate-prompt{display:flex;}}
 
-@media (orientation: portrait) and (max-width: 900px) {
-  #rotate-prompt { display: flex; }
+#scale-wrapper{
+  width:100vw;height:100vh;display:flex;
+  align-items:center;justify-content:center;
+  background:#000;overflow:hidden;
 }
-
-/* ── Scale wrapper — centres the game ──────────────────────── */
-#scale-wrapper {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-  overflow: hidden;
-}
-
-/* ── Game container — 1200 × 540 fixed, scaled by JS ─────── */
-#game-container {
-  position: relative;
-  width:  1200px;
-  height: 540px;
-  overflow: hidden;
-  background: #000;
-  transform-origin: center center;
-  /* DO NOT add transform here — JS sets it dynamically */
+#game-container{
+  position:relative;width:1200px;height:540px;
+  overflow:hidden;background:#000;transform-origin:center center;
 }
 
 /* ═══════════════════════════════════════════════════════════
    OFFICE VIEW
 ═══════════════════════════════════════════════════════════ */
-#office-view {
-  position: absolute;
-  top: 0; left: 0;
-  width: 1200px; height: 540px;
-  overflow: hidden;
-  z-index: 1;
+#office-view{
+  position:absolute;top:0;left:0;
+  width:1200px;height:540px;overflow:hidden;z-index:1;
+}
+#scene-background{
+  position:absolute;top:0;left:0;width:1920px;height:540px;will-change:transform;
+}
+#scene-image{
+  position:absolute;top:0;left:0;
+  width:1920px;height:540px;object-fit:fill;display:block;pointer-events:none;
 }
 
-/* ── Pannable background (1920 px wide) ───────────────────── */
-#scene-background {
-  position: absolute;
-  top: 0; left: 0;
-  width:  1920px;
-  height: 540px;
-  will-change: transform;
-  /* No CSS transition — lerp in JS gives smooth pan */
-}
-
-/* State-scene image fills the whole background */
-#scene-image {
-  position: absolute;
-  top: 0; left: 0;
-  width:  1920px;
-  height: 540px;
-  object-fit: fill;
-  display: block;
-  pointer-events: none;
-}
-
-/* ── Door videos ─────────────────────────────────────────── */
-/* Positioned inline in HTML at exact pixel offsets:
-   left door  → left: 80px
-   right door → left: 1590px                                */
-
-/* ── Button panels ────────────────────────────────────────── */
-/* Panels are children of #scene-background so they pan with it.
-   Pixel positions computed from CONFIG.PANELS × base resolution:
-     left  container: bg-x=0,    bg-y=190px, 60×160 px
-     right container: bg-x=1834, bg-y=190px, 60×160 px     */
-
-.panel-container {
-  position: absolute;
-  top: 190px;
-  width:  60px;
-  height: 160px;
-  z-index: 20;
-}
-
-#panel-left-container  { left:    0px; }
-#panel-right-container { left: 1834px; }
-
-.panel-img {
-  display: block;
-  width:  100%;
-  height: 100%;
-  pointer-events: none;
-  -webkit-user-drag: none;
-}
-
-/* Invisible button hitboxes — positions from CONFIG.PANELS
-   relative to their 60×160 container:
-
-   Left door  btn: x=19, y=34, w=29, h=36
-   Left light btn: x=18, y=86, w=27, h=34
-   Right door  btn: x=14, y=32, w=28, h=38
-   Right light btn: x=14, y=86, w=28, h=35         */
-
-.panel-btn {
-  position: absolute;
-  cursor: pointer;
-  z-index: 21;
-  /* Debug outline — remove when assets are placed: */
-  /* outline: 1px solid rgba(255,0,0,0.4); */
-}
-
-#btn-left-door   { left: 19px; top: 34px; width: 29px; height: 36px; }
-#btn-left-light  { left: 18px; top: 86px; width: 27px; height: 34px; }
-#btn-right-door  { left: 14px; top: 32px; width: 28px; height: 38px; }
-#btn-right-light { left: 14px; top: 86px; width: 28px; height: 35px; }
+.panel-container{position:absolute;top:190px;width:60px;height:160px;z-index:20;}
+#panel-left-container {left:0px;}
+#panel-right-container{left:1834px;}
+.panel-img{display:block;width:100%;height:100%;pointer-events:none;}
+.panel-btn{position:absolute;cursor:pointer;z-index:21;}
+#btn-left-door  {left:19px;top:34px;width:29px;height:36px;}
+#btn-left-light {left:18px;top:86px;width:27px;height:34px;}
+#btn-right-door {left:14px;top:32px;width:28px;height:38px;}
+#btn-right-light{left:14px;top:86px;width:28px;height:35px;}
 
 /* ═══════════════════════════════════════════════════════════
    CAMERA VIEW
 ═══════════════════════════════════════════════════════════ */
-#camera-view {
-  position: absolute;
-  top: 0; left: 0;
-  width:  1200px;
-  height: 540px;
-  background: #000;
-  z-index: 5;
-  /* display controlled by SceneRenderer (none / block) */
+#camera-view{position:absolute;inset:0;background:#000;z-index:5;}
+
+#cam-feed{position:absolute;inset:0;}
+
+/* Slightly brighter than before (0.6 → 0.72) */
+#camera-image{
+  display:block;width:100%;height:100%;object-fit:cover;
+  filter:grayscale(1) brightness(0.72) contrast(1.25) saturate(0);
 }
 
-/* Monitor frame */
-#cam-monitor {
-  position: absolute;
-  top: 12px; left: 50%;
-  transform: translateX(-50%);
-  width:  1120px;
-  height: 500px;
-  background: #050f05;
-  border: 3px solid #1e4a1e;
-  box-shadow: 0 0 30px rgba(0,80,0,0.4), inset 0 0 20px rgba(0,0,0,0.8);
-  display: flex;
-  gap: 8px;
-  padding: 8px;
+#cam-scanlines{
+  position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(
+    to bottom,transparent 0,transparent 2px,rgba(0,0,0,0.25) 2px,rgba(0,0,0,0.25) 3px);
 }
 
-/* Main screen area */
-#cam-screen-wrap {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: #000;
-  border: 2px solid #143a14;
+#camera-static{
+  position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0.06;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
+  background-size:200px 200px;animation:static-drift 0.14s steps(1) infinite;
+}
+#camera-static.active{opacity:0.92;animation:static-flare 0.05s steps(1) infinite;}
+@keyframes static-drift{0%{background-position:0 0;}33%{background-position:30px -20px;}66%{background-position:-25px 15px;}}
+@keyframes static-flare{0%{background-position:0 0;}25%{background-position:-60px 40px;}50%{background-position:80px -30px;}75%{background-position:-20px 70px;}}
+
+#cam-feed::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.65) 100%);
+  pointer-events:none;z-index:4;
 }
 
-#camera-image {
-  display: block;
-  width:  100%;
-  height: 100%;
-  object-fit: cover;
-  filter: brightness(0.85) saturate(0.6) hue-rotate(10deg);
+#cam-kitchen-disabled{
+  position:absolute;inset:0;background:#000;
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;z-index:5;
 }
+.kitchen-title{font-size:18px;letter-spacing:4px;color:#bbb;text-transform:uppercase;}
+.kitchen-sub  {font-size:11px;letter-spacing:3px;color:#444;}
 
-/* CRT scanlines */
-#cam-scanlines {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 3px,
-    rgba(0,0,0,0.18) 3px,
-    rgba(0,0,0,0.18) 4px
-  );
-  pointer-events: none;
-  z-index: 2;
+/* Camera HUD */
+#cam-hud{
+  position:absolute;inset:0;pointer-events:none;z-index:10;
+  animation:cam-flicker 7s ease-in-out infinite;
 }
+@keyframes cam-flicker{0%,80%,100%{opacity:1;}81%{opacity:0.88;}83%{opacity:1;}86%{opacity:0.82;}88%{opacity:1;}}
 
-/* Static noise overlay */
-#camera-static {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
-  opacity: 0;
-  transition: opacity 0.04s;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 200px 200px;
+#cam-rec-wrap{
+  position:absolute;top:10px;left:12px;
+  display:flex;align-items:center;gap:5px;
+  font-size:9px;letter-spacing:2px;color:#bbb;pointer-events:none;
 }
-#camera-static.active {
-  opacity: 0.9;
-  animation: static-shift 0.06s steps(1) infinite;
+#cam-rec-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#cc0000;box-shadow:0 0 5px rgba(200,0,0,0.9);
+  animation:rec-pulse 1s step-end infinite;
 }
-@keyframes static-shift {
-  0%   { background-position:   0px   0px; }
-  25%  { background-position: -60px  40px; }
-  50%  { background-position:  80px -30px; }
-  75%  { background-position: -20px  70px; }
-  100% { background-position:  40px -50px; }
-}
+@keyframes rec-pulse{50%{opacity:0.05;}}
 
-/* Camera label bar */
-#cam-label-bar {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 26px;
-  background: rgba(0, 30, 0, 0.75);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 10px;
-  z-index: 4;
-  border-top: 1px solid #1e4a1e;
-}
-#cam-label-text {
-  color: #7dff7d;
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-#cam-rec {
-  color: #ff4444;
-  font-size: 11px;
-  letter-spacing: 1px;
-  animation: rec-blink 1s step-end infinite;
-}
-@keyframes rec-blink { 50% { opacity: 0; } }
-
-/* Right side panel (buttons) */
-#cam-panel {
-  width: 210px;
-  background: #040c04;
-  border: 2px solid #143a14;
-  display: flex;
-  flex-direction: column;
-  padding: 10px 8px;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-#cam-map-label {
-  color: #4a9a4a;
-  font-size: 9px;
-  letter-spacing: 2.5px;
-  text-align: center;
-  text-transform: uppercase;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #1e4a1e;
-  margin-bottom: 4px;
-}
-
-#cam-buttons-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-  flex: 1;
-  align-content: start;
-}
-
-.cam-btn {
-  background: #080f08;
-  border: 1px solid #1e4a1e;
-  color: #5abf5a;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
-  padding: 5px 3px;
-  cursor: pointer;
-  text-align: center;
-  line-height: 1.5;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-  letter-spacing: 0.5px;
-}
-.cam-btn:hover {
-  background: #122012;
-  color: #9fff9f;
-  border-color: #3a7a3a;
-}
-.cam-btn.active {
-  background: #183018;
-  color: #ccffcc;
-  border-color: #5abf5a;
-  box-shadow: 0 0 6px rgba(90,190,90,0.35);
-}
-.cam-btn-id {
-  display: block;
-  font-size: 10px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-/* Close handle */
-#cam-close-handle {
-  position: absolute;
-  bottom: 0; left: 50%;
-  transform: translateX(-50%);
-  padding: 5px 32px 6px;
-  background: #0a150a;
-  border: 2px solid #1e4a1e;
-  border-bottom: none;
-  cursor: pointer;
-  z-index: 10;
-}
-#cam-close-handle span {
-  color: #5abf5a;
-  font-size: 10px;
-  letter-spacing: 2px;
-}
-#cam-close-handle:hover span { color: #9fff9f; }
-
-/* ═══════════════════════════════════════════════════════════
-   POWER-OUT VIEW
-═══════════════════════════════════════════════════════════ */
-#power-out-view {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  z-index: 6;
-  /* display controlled by SceneRenderer */
-}
-#power-out-image {
-  width:  1200px;
-  height: 540px;
-  object-fit: cover;
+#cam-room-name{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  font-size:11px;letter-spacing:3px;color:#ddd;
+  text-transform:uppercase;white-space:nowrap;pointer-events:none;
 }
 
 /* ═══════════════════════════════════════════════════════════
-   HUD
+   MINIMAP  — scaled up 4x from Figma (399×341)
+   Container: 399×341px but constrained so it fits.
+   We cap at 380×325 to keep it within the 540px game height
+   and leave room for the HUD.
+   Background is transparent — only lines and nodes are visible.
 ═══════════════════════════════════════════════════════════ */
-#hud {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 25;
-  /* display toggled by UIManager */
+#cam-minimap{
+  position:absolute;
+  bottom:8px;
+  right:8px;
+  /* 4× Figma scale: 399*0.95 ≈ 379, 341*0.95 ≈ 324 */
+  width:379px;
+  height:324px;
+  /* Transparent — no background panel */
+  background:transparent;
+  border:none;
+  overflow:visible;
+  pointer-events:auto;
 }
 
-#hud-top-right {
-  position: absolute;
-  top: 14px;
-  right: 22px;
-  text-align: right;
-}
-#night-display {
-  color: #aaa;
-  font-size: 12px;
-  letter-spacing: 2px;
-  margin-bottom: 3px;
-}
-#time-display {
-  color: #fff;
-  font-size: 24px;
-  letter-spacing: 3px;
+#cam-map-svg{
+  width:100%;
+  height:100%;
+  overflow:visible;
 }
 
-#hud-bottom-left {
-  position: absolute;
-  bottom: 18px;
-  left: 18px;
+/* Camera node default: dark fill, bright white stroke */
+.map-node rect{
+  fill:rgba(20,20,20,0.80);
+  stroke:rgba(255,255,255,0.65);
+  stroke-width:1.5;
 }
-#power-label, #power-usage-line {
-  color: #ccc;
-  font-size: 12px;
-  margin-bottom: 3px;
-  letter-spacing: 1px;
-}
-#power-pct   { color: #fff; font-weight: bold; }
-#power-bars  { color: #7dff7d; letter-spacing: 3px; }
 
-/* ── Camera raise handle (OFFICE mode) ─────────────────────── */
-#cam-toggle-handle {
-  position: absolute;
-  bottom: 0; left: 50%;
-  transform: translateX(-50%);
-  padding: 5px 32px 6px;
-  background: rgba(0, 0, 0, 0.65);
-  border: 2px solid #1e4a1e;
-  border-bottom: none;
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 30;
-  /* display toggled by UIManager */
+/* Text fills nearly the full node — much larger */
+.map-node text{
+  fill:rgba(255,255,255,0.85);
+  font-family:'Courier New',monospace;
+  /* Large enough to fill the 53×34 button in viewBox coords */
+  font-size:10px;
+  font-weight:bold;
+  text-anchor:middle;
+  dominant-baseline:middle;
+  letter-spacing:0.5px;
 }
-#cam-toggle-handle span {
-  color: #5abf5a;
-  font-size: 10px;
-  letter-spacing: 2px;
+
+.map-node{cursor:pointer;}
+.map-node:hover rect{fill:rgba(255,255,255,0.12);}
+
+/* Active camera: yellow highlight */
+.map-node.map-active rect{
+  fill:rgba(255,220,0,0.18);
+  stroke:#ffd800;
+  stroke-width:2;
 }
-#cam-toggle-handle:hover span { color: #9fff9f; }
+.map-node.map-active text{fill:#ffd800;}
+
+/* YOU marker */
+#map-you rect{
+  fill:rgba(10,10,10,0.85);
+  stroke:rgba(255,255,255,0.4);
+  stroke-width:1.2;
+}
 
 /* ═══════════════════════════════════════════════════════════
-   OVERLAYS  (always on top while active)
+   TRIGGER ZONES  (z-45, always clickable)
 ═══════════════════════════════════════════════════════════ */
+#office-trigger-zone,
+#cam-trigger-zone{
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:62%;height:40px;
+  background:rgba(0,0,0,0.52);
+  border:1px solid rgba(200,200,200,0.15);border-bottom:none;
+  border-radius:5px 5px 0 0;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  animation:zone-flicker 6s ease-in-out infinite;
+}
+#office-trigger-zone{z-index:45;}
+#cam-trigger-zone   {z-index:45;pointer-events:auto;}
 
-/* Jumpscare — SceneRenderer: display:flex / display:none */
-#jumpscare-overlay {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  /* display toggled by SceneRenderer */
-}
-#jumpscare-video {
-  width:  1200px;
-  height: 540px;
-  object-fit: cover;
-}
+@keyframes zone-flicker{0%,70%,100%{opacity:1;}71%{opacity:0.8;}73%{opacity:1;}76%{opacity:0.72;}78%{opacity:1;}}
 
-/* Night intro */
-#night-intro-overlay {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 90;
+.trigger-svg{
+  width:80px;height:26px;
+  color:rgba(210,210,210,0.45);
+  animation:chevron-pulse 2.4s ease-in-out infinite;
 }
-#night-intro-text {
-  color: #888;
-  font-size: 40px;
-  letter-spacing: 12px;
-  text-transform: uppercase;
-  animation: intro-fade 4s ease forwards;
-}
-@keyframes intro-fade {
-  0%   { opacity: 0; transform: scale(0.97); }
-  25%  { opacity: 1; transform: scale(1);    }
-  80%  { opacity: 1; }
-  100% { opacity: 0; }
-}
+@keyframes chevron-pulse{0%,100%{opacity:0.35;}50%{opacity:0.8;}}
+#office-trigger-zone:hover .trigger-svg,
+#cam-trigger-zone:hover    .trigger-svg{color:rgba(230,230,230,0.75);}
 
-/* Game-over screen */
-#gameover-overlay {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 80;
-}
-#gameover-content { text-align: center; }
-#gameover-title {
-  color: #cc2222;
-  font-size: 52px;
-  letter-spacing: 8px;
-  margin-bottom: 20px;
-  text-shadow: 0 0 20px rgba(200,30,30,0.6);
-}
-#gameover-sub {
-  color: #777;
-  font-size: 14px;
-  letter-spacing: 1px;
-  margin-bottom: 36px;
-}
-#gameover-who { color: #cc4444; }
-#gameover-buttons { display: flex; gap: 16px; justify-content: center; }
+/* ═══════════════════════════════════════════════════════════
+   HUD  (z-40, single source: power / time / night)
+═══════════════════════════════════════════════════════════ */
+#hud{position:absolute;inset:0;pointer-events:none;z-index:40;}
+#hud-top-right{position:absolute;top:14px;right:22px;text-align:right;}
+#night-display{color:#aaa;font-size:12px;letter-spacing:2px;margin-bottom:3px;}
+#time-display {color:#fff;font-size:24px;letter-spacing:3px;}
+#hud-bottom-left{position:absolute;bottom:18px;left:18px;}
+#power-label,#power-usage-line{color:#ccc;font-size:12px;margin-bottom:3px;}
+#power-pct {color:#fff;font-weight:bold;}
+#power-bars{color:#7dff7d;letter-spacing:2px;}
 
-/* Win screen */
-#win-overlay {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 80;
-}
-#win-content { text-align: center; }
-#win-title {
-  color: #ddb040;
-  font-size: 64px;
-  letter-spacing: 12px;
-  margin-bottom: 20px;
-  text-shadow: 0 0 30px rgba(220,180,60,0.5);
-}
-#win-sub {
-  color: #777;
-  font-size: 14px;
-  letter-spacing: 1px;
-  margin-bottom: 36px;
-}
-#win-buttons { display: flex; gap: 16px; justify-content: center; }
+/* ═══════════════════════════════════════════════════════════
+   POWER-OUT
+═══════════════════════════════════════════════════════════ */
+#power-out-view{position:absolute;inset:0;background:#000;z-index:6;}
+#power-out-image{width:1200px;height:540px;object-fit:cover;}
 
-/* Shared overlay buttons */
-#gameover-overlay button,
-#win-overlay button {
-  background: #0d0d0d;
-  border: 2px solid #444;
-  color: #bbb;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  letter-spacing: 2px;
-  padding: 12px 28px;
-  cursor: pointer;
-  transition: border-color 0.18s, color 0.18s, background 0.18s;
+/* ═══════════════════════════════════════════════════════════
+   OVERLAYS
+═══════════════════════════════════════════════════════════ */
+#jumpscare-overlay{
+  position:absolute;inset:0;background:#000;
+  align-items:center;justify-content:center;z-index:100;
 }
-#gameover-overlay button:hover,
-#win-overlay button:hover {
-  border-color: #888;
-  color: #fff;
-  background: #1a1a1a;
-}
-#gameover-overlay button:disabled,
-#win-overlay button:disabled {
-  opacity: 0.35;
-  cursor: default;
-  pointer-events: none;
-}
-/* ═══════════════════════════════════════════════════════════════
-   game.css PATCH — additions / corrections only
-   Append this to the bottom of your existing css/game.css,
-   OR replace the full file with these rules included.
-═══════════════════════════════════════════════════════════════ */
+#jumpscare-video{width:1200px;height:540px;object-fit:cover;}
 
-/* ── Kitchen "CAMERA DISABLED" overlay ─────────────────────── */
-#cam-kitchen-disabled {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  display: none;          /* shown by SceneRenderer when CAM 6 active */
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  z-index: 5;
+#night-intro-overlay{
+  position:absolute;inset:0;background:#000;
+  display:none;align-items:center;justify-content:center;z-index:90;
+}
+#night-intro-text{
+  color:#888;font-size:40px;letter-spacing:12px;text-transform:uppercase;
+  animation:intro-fade 4s ease forwards;
+}
+@keyframes intro-fade{
+  0%{opacity:0;transform:scale(0.97);}25%{opacity:1;transform:scale(1);}
+  80%{opacity:1;}100%{opacity:0;}
 }
 
-.kitchen-icon {
-  font-size: 32px;
-  opacity: 0.4;
-  filter: grayscale(1);
+/* GAME OVER */
+#gameover-overlay{position:absolute;inset:0;z-index:80;display:none;background:#000;}
+#gameover-bg{
+  position:absolute;inset:0;
+  background-image:url("../assets/images/ui/gameover_bg.png");
+  background-size:cover;background-position:center;
 }
+#gameover-text{position:absolute;bottom:60px;right:60px;text-align:right;}
+#gameover-title{
+  display:block;font-size:52px;font-weight:900;
+  letter-spacing:14px;color:#cc0000;text-transform:uppercase;
+  text-shadow:0 0 30px rgba(200,0,0,0.8),2px 2px 0 #000;
+  animation:go-flicker 6s ease-in-out infinite;
+}
+@keyframes go-flicker{0%,85%,100%{opacity:1;}86%{opacity:0.85;}88%{opacity:1;}91%{opacity:0.78;}93%{opacity:1;}}
+#gameover-buttons{display:flex;gap:16px;justify-content:flex-end;margin-top:28px;}
+#gameover-overlay button{
+  background:none;border:1px solid #441111;color:#882222;
+  font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;
+  padding:10px 24px;cursor:pointer;text-transform:uppercase;
+  transition:border-color 0.15s,color 0.15s;
+}
+#gameover-overlay button:hover{border-color:#aa3333;color:#cc4444;}
 
-.kitchen-title {
-  font-family: 'Courier New', monospace;
-  font-size: 18px;
-  letter-spacing: 4px;
-  color: #3a6a3a;
-  text-transform: uppercase;
+/* WIN */
+#win-overlay{
+  position:absolute;inset:0;background:#000;
+  display:none;align-items:center;justify-content:center;z-index:80;
 }
-
-.kitchen-sub {
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: #2a4a2a;
-  text-transform: uppercase;
+#win-content{text-align:center;}
+#win-title{color:#ddb040;font-size:64px;letter-spacing:12px;margin-bottom:20px;text-shadow:0 0 30px rgba(220,180,60,0.5);}
+#win-sub  {color:#777;font-size:14px;letter-spacing:1px;margin-bottom:36px;}
+#win-buttons{display:flex;gap:16px;justify-content:center;}
+#win-overlay button{
+  background:#0d0d0d;border:2px solid #444;color:#bbb;
+  font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;
+  padding:12px 28px;cursor:pointer;
+  transition:border-color 0.18s,color 0.18s,background 0.18s;
 }
-
-/* Blinking cursor on the label for atmosphere */
-.kitchen-title::after {
-  content: '_';
-  animation: blink-cursor 1.2s step-end infinite;
-}
-@keyframes blink-cursor { 50% { opacity: 0; } }
-
-/* ── Foxy peek video overlay ────────────────────────────────── */
-#foxy-peek-overlay {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  display: none;          /* shown by SceneRenderer._startFoxyPeek() */
-  align-items: center;
-  justify-content: center;
-  z-index: 95;            /* above power-out (6) and camera (5), below jumpscare (100) */
-}
-
-#foxy-peek-video {
-  width:  1200px;
-  height: 540px;
-  object-fit: cover;
-}
+#win-overlay button:hover{border-color:#888;color:#fff;background:#1a1a1a;}
+#win-overlay button:disabled{opacity:0.35;cursor:default;pointer-events:none;}

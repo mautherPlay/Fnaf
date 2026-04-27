@@ -4,21 +4,20 @@
  * NightSystem
  * ─────────────────────────────────────────────────────────────
  * Manages the in-game clock (12 AM → 6 AM).
- * One in-game hour = CONFIG.HOUR_MS milliseconds.
- * Emits 'hourChanged' and 'nightComplete'.
+ * On each hour change, calls animAI.applyEscalation() to
+ * simulate the FNAF1 "gets harder as the night goes on" feeling.
  */
 class NightSystem {
-  constructor(state, saveSystem, soundSystem) {
-    this.state  = state;
-    this.save   = saveSystem;
-    this.sound  = soundSystem;
+  constructor(state, saveSystem, soundSystem, animAI) {
+    this.state   = state;
+    this.save    = saveSystem;
+    this.sound   = soundSystem;
+    this.animAI  = animAI;   // reference injected by main.js
     this._elapsed = 0;
   }
 
-  // ── Called each game loop frame ──────────────────────────────
   update(deltaTime) {
     if (!this.state.nightRunning) return;
-
     this._elapsed += deltaTime;
 
     const newHour = Math.floor(this._elapsed / CONFIG.HOUR_MS);
@@ -26,6 +25,9 @@ class NightSystem {
     if (newHour !== this.state.hour && newHour <= CONFIG.TOTAL_HOURS) {
       this.state.hour = newHour;
       EventBus.emit('hourChanged', newHour);
+
+      // Mid-night escalation
+      if (this.animAI) this.animAI.applyEscalation(this.state.night, newHour);
     }
 
     if (newHour >= CONFIG.TOTAL_HOURS) {
@@ -33,14 +35,12 @@ class NightSystem {
     }
   }
 
-  // ── Start a new night ────────────────────────────────────────
   startNight(night) {
-    this._elapsed        = 0;
-    this.state.night     = night;
-    this.state.hour      = 0;
+    this._elapsed           = 0;
+    this.state.night        = night;
+    this.state.hour         = 0;
     this.state.nightRunning = true;
 
-    // Apply AI levels from config
     const levels = CONFIG.AI_LEVELS[night] || CONFIG.AI_LEVELS[5];
     const a = this.state.animatronics;
     a.freddy.aiLevel = levels.freddy;
@@ -56,29 +56,19 @@ class NightSystem {
     EventBus.emit('nightStarted', night);
   }
 
-  // ── Phone call ───────────────────────────────────────────────
   playPhoneCall(night) {
-    if (night <= 3) {
+    if (night >= 1 && night <= 4) {
       this.sound.play(`phone_guy_night${night}`);
     }
   }
 
-  // ── Night over (6 AM) ────────────────────────────────────────
   _onNightComplete() {
     if (!this.state.nightRunning) return;
     this.state.nightRunning = false;
-
     this.sound.stopAll();
     this.sound.play('6am');
-
     this.save.completeNight(this.state.night);
-
     EventBus.emit('nightComplete', this.state.night);
-
-    if (this.state.night >= 5) {
-      this.state.setPhase('WIN');
-    } else {
-      this.state.setPhase('WIN');   // show night-complete screen (reused as WIN phase)
-    }
+    this.state.setPhase('WIN');
   }
 }

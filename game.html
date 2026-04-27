@@ -16,93 +16,263 @@
   <div id="scale-wrapper">
     <div id="game-container">
 
-      <!-- ════════════════════════════════════════════════════
-           OFFICE VIEW
-      ════════════════════════════════════════════════════ -->
-      <div id="office-view">
+      <!-- ════ OFFICE VIEW ════════════════════════════════════ -->
+      <div id="office-view" style="display:none">
         <div id="scene-background">
-
           <img id="scene-image" src="" alt="" draggable="false">
-
-          <!-- Left door video: display:none until closing starts -->
-          <video id="door-left-video"
-            preload="auto" muted playsinline
-            style="position:absolute;top:0;left:80px;
-                   width:250px;height:540px;object-fit:fill;
-                   z-index:10;display:none;">
+          <video id="door-left-video" preload="auto" muted playsinline
+            style="position:absolute;top:0;left:85px;width:250px;height:540px;object-fit:fill;z-index:10;display:none;"></video>
+          <video id="door-right-video" preload="auto" muted playsinline
+            style="position:absolute;top:0;left:1530px;width:250px;height:540px;object-fit:fill;z-index:10;display:none;"></video>
+          <!--
+            FAN VIDEO OVERLAY
+            Coordinates in 1920px scene-background space.
+            Provided by user for 1200×540 layout: left=586 top=232 w=100 h=142.
+            These are already in scene-background (1920px) coordinate space.
+          -->
+          <video id="fan-video"
+            src="assets/videos/fan_loop.mp4"
+            preload="auto" muted playsinline loop autoplay
+            style="position:absolute;top:227.4px;left:936px;
+                   width:165px;height:147px;object-fit:fill;
+                   z-index:8;display:block;pointer-events:none;">
           </video>
 
-          <!-- Right door video -->
-          <video id="door-right-video"
-            preload="auto" muted playsinline
-            style="position:absolute;top:0;left:1530px;
-                   width:250px;height:540px;object-fit:fill;
-                   z-index:10;display:none;">
-          </video>
+          <!-- Fan hitbox — covers fan exactly, stopPropagation prevents pan interference -->
+          <div id="fan-hitbox"
+            style="position:absolute;top:227.4px;left:936px;
+                   width:165px;height:146px;
+                   z-index:15;cursor:pointer;">
+          </div>
 
-          <!-- Left button panel (60×160 at bg-x:0, bg-y:190) -->
+          <!--
+            FREDDY'S NOSE BUTTON
+            Normalized x=0.412 y=0.313 w=0.0225 h=0.046 relative to 1200×540.
+            In 1920px background (centered pan = +360 offset):
+              left = 360 + 0.412×1200 = 854px  top = 0.313×540 = 169px
+              w = 0.0225×1200 = 27px            h = 0.046×540 = 25px
+          -->
+          <div id="nose-hitbox"
+            style="position:absolute;top:169px;left:800px;
+                   width:27px;height:25px;
+                   z-index:15;cursor:pointer;">
+          </div>
+
           <div id="panel-left-container" class="panel-container">
             <img id="panel-left-img" src="" alt="" draggable="false" class="panel-img">
             <div id="btn-left-door"  class="panel-btn" data-side="left"  data-action="door"></div>
             <div id="btn-left-light" class="panel-btn" data-side="left"  data-action="light"></div>
           </div>
-
-          <!-- Right button panel (60×160 at bg-x:1834, bg-y:190) -->
           <div id="panel-right-container" class="panel-container">
             <img id="panel-right-img" src="" alt="" draggable="false" class="panel-img">
             <div id="btn-right-door"  class="panel-btn" data-side="right" data-action="door"></div>
             <div id="btn-right-light" class="panel-btn" data-side="right" data-action="light"></div>
           </div>
-
         </div>
       </div>
 
-      <!-- ════════════════════════════════════════════════════
-           CAMERA VIEW
-      ════════════════════════════════════════════════════ -->
+      <!-- ════ CAMERA VIEW ════════════════════════════════════ -->
       <div id="camera-view" style="display:none">
-        <div id="cam-monitor">
 
-          <div id="cam-screen-wrap">
-            <img id="camera-image" src="" alt="" draggable="false">
-            <div id="cam-scanlines"></div>
-            <div id="camera-static"></div>
-
-            <!-- Kitchen "camera disabled" overlay (CAM 6) -->
-            <div id="cam-kitchen-disabled" style="display:none">
-              <span class="kitchen-icon">📷</span>
-              <p class="kitchen-title">CAMERA DISABLED</p>
-              <p class="kitchen-sub">— AUDIO ONLY —</p>
-            </div>
-
-            <div id="cam-label-bar">
-              <span id="cam-label-text">CAM 1A - SHOW STAGE</span>
-              <span id="cam-rec">● REC</span>
-            </div>
+        <div id="cam-feed">
+          <img id="camera-image" src="" alt="" draggable="false">
+          <video id="cam-foxy-video" preload="auto" muted playsinline loop
+            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;z-index:1;"></video>
+          <div id="cam-scanlines"></div>
+          <div id="camera-static"></div>
+          <div id="cam-kitchen-disabled" style="display:none">
+            <p class="kitchen-title">-CAMERA DISABLED-</p>
+            <p class="kitchen-sub">AUDIO ONLY</p>
           </div>
-
-          <div id="cam-panel">
-            <div id="cam-map-label">LOCATION SELECT</div>
-            <div id="cam-buttons-container"></div>
-          </div>
-
         </div>
 
-        <div id="cam-close-handle">
-          <span>▼ LOWER MONITOR</span>
-        </div>
-      </div>
+        <!-- Camera HUD: REC + room name + minimap only
+             Power / Time / Night live in #hud (z-40) -->
+        <div id="cam-hud">
 
-      <!-- ════════════════════════════════════════════════════
-           POWER-OUT VIEW
-      ════════════════════════════════════════════════════ -->
+          <div id="cam-rec-wrap">
+            <span id="cam-rec-dot"></span>
+            <span>REC</span>
+          </div>
+
+          <div id="cam-room-name">SHOW STAGE</div>
+
+          <!--
+            MINIMAP: viewBox="0 0 399 341" = original Figma frame.
+            Container is 379x324px (scale 0.95).
+            Background is TRANSPARENT — only lines and nodes render.
+            CAM 7 (Bathrooms) is at Figma coords: x=324 y=90 w=53 h=34.
+          -->
+          <div id="cam-minimap">
+            <svg id="cam-map-svg"
+                 viewBox="0 0 399 341"
+                 xmlns="http://www.w3.org/2000/svg"
+                 shape-rendering="crispEdges">
+
+              <!-- ══ CORRIDOR LINES from Figma ══ -->
+              <g fill="#D9D9D9" opacity="0.5">
+                <rect x="317" y="84"  width="2"   height="107"/>
+                <rect x="317" y="82"  width="27"  height="2"/>
+                <rect x="319" y="189" width="23"  height="2"/>
+                <rect x="342" y="84"  width="2"   height="6"/>
+                <rect x="342" y="124" width="2"   height="67"/>
+                <rect x="354" y="124" width="2"   height="17"/>
+                <rect x="354" y="163" width="2"   height="28"/>
+                <rect x="379" y="116" width="2"   height="25"/>
+                <rect x="379" y="163" width="2"   height="28"/>
+                <rect x="377" y="114" width="4"   height="2"/>
+                <rect x="356" y="139" width="23"  height="2"/>
+                <rect x="356" y="163" width="23"  height="2"/>
+                <rect x="356" y="189" width="23"  height="2"/>
+                <rect x="344" y="132" width="10"  height="2"/>
+                <rect x="344" y="169" width="10"  height="2"/>
+                <rect x="344" y="181" width="10"  height="2"/>
+                <rect x="279" y="201" width="69"  height="2"/>
+                <rect x="348" y="201" width="2"   height="7"/>
+                <rect x="277" y="201" width="2"   height="39"/>
+                <rect x="284" y="261" width="67"  height="2"/>
+                <rect x="349" y="242" width="2"   height="19"/>
+                <rect x="264" y="201" width="2"   height="39"/>
+                <rect x="228" y="201" width="2"   height="122"/>
+                <rect x="230" y="201" width="34"  height="2"/>
+                <rect x="230" y="321" width="36"  height="2"/>
+                <rect x="264" y="310" width="2"   height="11"/>
+                <rect x="170" y="310" width="2"   height="13"/>
+                <rect x="134" y="321" width="36"  height="2"/>
+                <rect x="134" y="310" width="2"   height="11"/>
+                <rect x="134" y="273" width="2"   height="3"/>
+                <rect x="170" y="273" width="2"   height="3"/>
+                <rect x="181" y="273" width="2"   height="3"/>
+                <rect x="170" y="201" width="2"   height="38"/>
+                <rect x="134" y="201" width="2"   height="38"/>
+                <rect x="136" y="201" width="34"  height="2"/>
+                <rect x="157" y="193" width="2"   height="8"/>
+                <rect x="240" y="193" width="2"   height="8"/>
+                <rect x="252" y="193" width="2"   height="8"/>
+                <rect x="145" y="193" width="2"   height="8"/>
+                <rect x="92"  y="191" width="215" height="2"/>
+                <rect x="92"  y="171" width="2"   height="20"/>
+                <rect x="60"  y="183" width="32"  height="2"/>
+                <rect x="60"  y="141" width="2"   height="42"/>
+                <rect x="62"  y="141" width="27"  height="2"/>
+                <rect x="121" y="216" width="2"   height="64"/>
+                <rect x="89"  y="278" width="32"  height="2"/>
+                <rect x="89"  y="259" width="2"   height="19"/>
+                <rect x="89"  y="216" width="32"  height="2"/>
+                <rect x="89"  y="218" width="2"   height="7"/>
+                <rect x="281" y="193" width="2"   height="8"/>
+                <rect x="293" y="193" width="2"   height="8"/>
+                <rect x="305" y="65"  width="2"   height="126"/>
+                <rect x="307" y="113" width="10"  height="2"/>
+                <rect x="307" y="101" width="10"  height="2"/>
+                <rect x="169" y="65"  width="136" height="2"/>
+                <rect x="246" y="34"  width="2"   height="31"/>
+                <rect x="187" y="34"  width="59"  height="2"/>
+                <rect x="152" y="49"  width="2"   height="16"/>
+                <rect x="92"  y="65"  width="24"  height="2"/>
+                <rect x="92"  y="67"  width="2"   height="70"/>
+                <rect x="47"  y="65"  width="2"   height="25"/>
+                <rect x="49"  y="65"  width="33"  height="2"/>
+                <rect x="80"  y="67"  width="2"   height="61"/>
+                <rect x="50"  y="126" width="30"  height="2"/>
+                <rect x="48"  y="124" width="2"   height="4"/>
+                <rect x="82"  y="86"  width="10"  height="2"/>
+                <rect x="82"  y="74"  width="10"  height="2"/>
+                <rect x="123" y="253" width="11"  height="2"/>
+                <rect x="123" y="241" width="11"  height="2"/>
+                <rect x="220" y="303" width="8"   height="2"/>
+                <rect x="220" y="291" width="8"   height="2"/>
+                <rect x="264" y="274" width="2"   height="2"/>
+              </g>
+
+              <!-- ══ YOU ══ -->
+              <g id="map-you">
+                <rect x="182" y="268" width="38" height="55" rx="1"
+                      fill="#1a1a1a" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+                <text x="201" y="299"
+                      fill="#fff" font-size="9.5"
+                      font-family="'Courier New',monospace"
+                      text-anchor="middle" dominant-baseline="middle">YOU</text>
+              </g>
+
+              <!-- ══ CAMERA NODES ══ -->
+
+              <g class="map-node" data-cam="5">
+                <rect x="22"  y="90"  width="53" height="34" rx="1"/>
+                <text x="48"  y="107">CAM 5</text>
+              </g>
+
+              <g class="map-node" data-cam="1C">
+                <rect x="89"  y="137" width="53" height="34" rx="1"/>
+                <text x="115" y="154">CAM 1C</text>
+              </g>
+
+              <g class="map-node" data-cam="1B">
+                <rect x="116" y="65"  width="53" height="34" rx="1"/>
+                <text x="142" y="82">CAM 1B</text>
+              </g>
+
+              <g class="map-node" data-cam="1A">
+                <rect x="134" y="15"  width="53" height="34" rx="1"/>
+                <text x="160" y="32">CAM 1A</text>
+              </g>
+
+              <g class="map-node" data-cam="3">
+                <rect x="58"  y="225" width="53" height="34" rx="1"/>
+                <text x="84"  y="242">CAM 3</text>
+              </g>
+
+              <g class="map-node" data-cam="2A">
+                <rect x="134" y="239" width="53" height="34" rx="1"/>
+                <text x="160" y="256">CAM 2A</text>
+              </g>
+
+              <g class="map-node" data-cam="2B">
+                <rect x="134" y="276" width="53" height="34" rx="1"/>
+                <text x="160" y="293">CAM 2B</text>
+              </g>
+
+              <g class="map-node" data-cam="4A">
+                <rect x="231" y="240" width="53" height="34" rx="1"/>
+                <text x="257" y="257">CAM 4A</text>
+              </g>
+
+              <g class="map-node" data-cam="4B">
+                <rect x="231" y="276" width="53" height="34" rx="1"/>
+                <text x="257" y="293">CAM 4B</text>
+              </g>
+
+              <g class="map-node" data-cam="6">
+                <rect x="317" y="208" width="53" height="34" rx="1"/>
+                <text x="343" y="225">CAM 6</text>
+              </g>
+
+              <!-- CAM 7 Bathrooms — Figma coords: left=324 top=90 w=53 h=34 -->
+              <g class="map-node" data-cam="7">
+                <rect x="324" y="90"  width="53" height="34" rx="1"/>
+                <text x="350" y="107">CAM 7</text>
+              </g>
+
+            </svg>
+          </div><!-- /cam-minimap -->
+
+        </div><!-- /cam-hud -->
+
+        <div id="cam-trigger-zone" style="display:none">
+          <svg class="trigger-svg" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="30,8  60,20  90,8"  stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="30,20 60,32  90,20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+          </svg>
+        </div>
+
+      </div><!-- /camera-view -->
+
+      <!-- ════ POWER-OUT ═══════════════════════════════════════ -->
       <div id="power-out-view" style="display:none">
         <img id="power-out-image" src="" alt="" draggable="false">
       </div>
 
-      <!-- ════════════════════════════════════════════════════
-           HUD
-      ════════════════════════════════════════════════════ -->
+      <!-- ════ HUD — z-40 ═══════════════════════════════════════ -->
       <div id="hud" style="display:none">
         <div id="hud-top-right">
           <div id="night-display">Night 1</div>
@@ -110,53 +280,44 @@
         </div>
         <div id="hud-bottom-left">
           <div id="power-label">Power left: <span id="power-pct">100</span>%</div>
-          <div id="power-usage-line">Usage: <span id="power-bars">■□□□□□</span></div>
+          <div id="power-usage-line">Usage: <span id="power-bars">&#x25AE;&#x25AE;</span></div>
         </div>
       </div>
 
-      <div id="cam-toggle-handle" style="display:none">
-        <span>▲ MONITOR</span>
+      <div id="office-trigger-zone" style="display:none">
+        <svg class="trigger-svg" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="30,28 60,16  90,28" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="30,16 60,4   90,16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+        </svg>
       </div>
 
-      <!-- ════════════════════════════════════════════════════
-           OVERLAYS (highest z-indices)
-      ════════════════════════════════════════════════════ -->
-
-      <!-- Foxy peek video — plays BEFORE jumpscare when door was open -->
-      <div id="foxy-peek-overlay" style="display:none">
-        <video id="foxy-peek-video" preload="auto" muted playsinline></video>
-      </div>
-
-      <!-- Jumpscare -->
+      <!-- ════ OVERLAYS ═══════════════════════════════════════ -->
       <div id="jumpscare-overlay" style="display:none">
         <video id="jumpscare-video" preload="auto" muted playsinline></video>
       </div>
 
-      <!-- Night intro -->
       <div id="night-intro-overlay" style="display:none">
         <div id="night-intro-text">Night 1</div>
       </div>
 
-      <!-- Game Over -->
       <div id="gameover-overlay" style="display:none">
-        <div id="gameover-content">
-          <div id="gameover-title">GAME OVER</div>
-          <div id="gameover-sub">You were caught by <span id="gameover-who">an animatronic</span>.</div>
+        <div id="gameover-bg"></div>
+        <div id="gameover-text">
+          <span id="gameover-title">GAME OVER</span>
           <div id="gameover-buttons">
-            <button id="btn-retry">TRY AGAIN</button>
-            <button id="btn-menu-go">MENU</button>
+            <button id="btn-retry">Try Again</button>
+            <button id="btn-menu-go">Menu</button>
           </div>
         </div>
       </div>
 
-      <!-- Night Win -->
       <div id="win-overlay" style="display:none">
         <div id="win-content">
           <div id="win-title">6 AM</div>
           <div id="win-sub">You survived the night!</div>
           <div id="win-buttons">
-            <button id="btn-next-night">NEXT NIGHT</button>
-            <button id="btn-win-menu">MENU</button>
+            <button id="btn-next-night">Next Night</button>
+            <button id="btn-win-menu">Menu</button>
           </div>
         </div>
       </div>
@@ -164,7 +325,6 @@
     </div>
   </div>
 
-  <!-- Scripts (load order critical) -->
   <script src="js/config.js"></script>
   <script src="js/EventBus.js"></script>
   <script src="js/GameState.js"></script>
@@ -178,6 +338,7 @@
   <script src="js/SceneRenderer.js"></script>
   <script src="js/UIManager.js"></script>
   <script src="js/InputSystem.js"></script>
+  <script src="js/FanSystem.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

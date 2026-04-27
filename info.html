@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SYSTEM INFO — Five Nights at Freddy's</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+
+/* ════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES  — edit here to restyle the whole page
+════════════════════════════════════════════════════════════ */
+:root {
+  --bg:          #050505;
+  --surface:     rgba(255,255,255,0.03);
+  --surface-h:   rgba(255,255,255,0.06);
+  --border:      rgba(255,255,255,0.08);
+  --border-h:    rgba(255,255,255,0.18);
+  --red:         #cc2200;
+  --red-glow:    rgba(204,34,0,0.35);
+  --amber:       #d4880a;
+  --amber-dim:   rgba(212,136,10,0.15);
+  --green:       #3a7a3a;
+  --green-bright:#7dff7d;
+  --text:        #c8c8c8;
+  --text-dim:    #555;
+  --text-bright: #efefef;
+  --font-mono:   'IBM Plex Mono', 'Share Tech Mono', monospace;
+  --font-display:'Bebas Neue', 'Share Tech Mono', monospace;
+  --radius:      4px;
+  --radius-lg:   8px;
+
+  /* Threat level colours — change to restyle badge colours */
+  --threat-low:      #2a6a2a;
+  --threat-low-text: #7dff7d;
+  --threat-med:      #6a5a00;
+  --threat-med-text: #ffd800;
+  --threat-high:     #6a2200;
+  --threat-high-text:#ff7744;
+  --threat-crit:     #8a0000;
+  --threat-crit-text:#ff2020;
+}
+
+/* ════════════════════════════════════════════════════════════
+   RESET + BASE
+════════════════════════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BACKGROUND LAYER
+   Replace background-image URL to change the backdrop.
+   Video option: uncomment <video> in HTML.
+════════════════════════════════════════════════════════════ */
+.page-bg {
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("assets/images/ui/info_bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.page-bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.90) 100%);
+}
+/* Optional video background — uncomment <video> in HTML */
+.page-bg video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CRT OVERLAY  (noise + scanlines)
+════════════════════════════════════════════════════════════ */
+.crt-overlay {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none;
+}
+.crt-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent 2px,
+    rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 3px
+  );
+}
+.crt-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 250px;
+  animation: noise-scroll 0.12s steps(1) infinite;
+}
+@keyframes noise-scroll {
+  0%  { background-position:   0px   0px; }
+  25% { background-position: -70px  30px; }
+  50% { background-position:  50px -50px; }
+  75% { background-position: -20px  80px; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+════════════════════════════════════════════════════════════ */
+.page {
+  position: relative; z-index: 2;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem 5rem;
+}
+
+/* ════════════════════════════════════════════════════════════
+   SITE HEADER
+════════════════════════════════════════════════════════════ */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+  flex-wrap: wrap;
+  animation: fade-down 0.6s ease both;
+}
+@keyframes fade-down {
+  from { opacity:0; transform:translateY(-12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.site-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.site-logo-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  letter-spacing: 4px;
+  color: var(--text-bright);
+  text-shadow: 0 0 20px rgba(255,255,255,0.12);
+  line-height: 1;
+}
+.site-logo-sub {
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.status-pill {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--green);
+  color: var(--green-bright);
+  border-radius: 2px;
+  white-space: nowrap;
+  animation: status-pulse 3s ease-in-out infinite;
+}
+@keyframes status-pulse { 0%,100%{opacity:1;} 50%{opacity:0.55;} }
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s, background 0.18s;
+  white-space: nowrap;
+}
+.btn-back:hover  { border-color: var(--border-h); color: var(--text-bright); background: var(--surface-h); }
+.btn-back:active { transform: scale(0.97); }
+.btn-back-arrow  { font-size: 1em; }
+
+/* ════════════════════════════════════════════════════════════
+   SECTION WRAPPER + TITLE
+════════════════════════════════════════════════════════════ */
+.section {
+  margin-top: 4rem;
+  animation: fade-up 0.7s ease both;
+}
+.section:nth-child(2) { animation-delay: 0.15s; }
+.section:nth-child(3) { animation-delay: 0.25s; }
+@keyframes fade-up {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  letter-spacing: 4px;
+  color: var(--text-bright);
+  line-height: 1;
+}
+.section-sub {
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ════════════════════════════════════════════════════════════
+   ANIMATRONIC CARDS GRID
+════════════════════════════════════════════════════════════ */
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 640px)  { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .cards-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* ─── Single card ─────────────────────────────────────────── */
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.22s, transform 0.22s;
+  /* Staggered entrance animation — set via inline style */
+}
+.card:hover {
+  border-color: var(--border-h);
+  transform: translateY(-3px);
+}
+
+/* Image area — 16:10 ratio */
+.card-img-wrap {
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  position: relative;
+  background: #0a0a0a;
+}
+.card-img-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7) 100%);
+}
+.card-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  /* Slightly desaturated like a CCTV feed */
+  filter: grayscale(0.25) contrast(1.05);
+  transition: transform 0.4s ease, filter 0.4s ease;
+}
+.card:hover .card-img {
+  transform: scale(1.04);
+  filter: grayscale(0) contrast(1.1);
+}
+
+/* Placeholder when image is missing */
+.card-img-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; letter-spacing: 3px; color: var(--text-dim);
+}
+
+.card-body {
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+}
+
+.card-name {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  letter-spacing: 3px;
+  color: var(--text-bright);
+  line-height: 1;
+}
+
+.card-desc {
+  font-size: 0.72rem;
+  line-height: 1.75;
+  color: var(--text);
+  font-style: italic;
+  border-left: 2px solid var(--border);
+  padding-left: 0.75rem;
+}
+
+/* Sub-section labels inside card */
+.card-label {
+  font-size: 0.6rem;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.obs-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.obs-list li {
+  font-size: 0.68rem;
+  line-height: 1.5;
+  padding-left: 1rem;
+  position: relative;
+  color: var(--text);
+}
+.obs-list li::before {
+  content: '›';
+  position: absolute; left: 0;
+  color: var(--text-dim);
+}
+
+.hints-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.hints-list li {
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: #aaa;
+  padding-left: 1.2rem;
+  position: relative;
+}
+.hints-list li::before {
+  content: '⚠';
+  position: absolute; left: 0;
+  color: var(--amber);
+  font-size: 0.6em;
+  top: 0.15em;
+}
+
+/* Threat level badge */
+.threat-badge {
+  align-self: flex-start;
+  font-size: 0.62rem;
+  letter-spacing: 3px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.threat-LOW      { background: var(--threat-low);  color: var(--threat-low-text);  border:1px solid var(--threat-low-text); }
+.threat-MEDIUM   { background: var(--threat-med);  color: var(--threat-med-text);  border:1px solid var(--threat-med-text); }
+.threat-HIGH     { background: var(--threat-high); color: var(--threat-high-text); border:1px solid var(--threat-high-text); }
+.threat-CRITICAL { background: var(--threat-crit); color: var(--threat-crit-text); border:1px solid var(--threat-crit-text); animation: crit-pulse 1.5s step-end infinite; }
+@keyframes crit-pulse { 50%{opacity:0.7;} }
+
+/* ════════════════════════════════════════════════════════════
+   ABOUT SECTION — info blocks
+════════════════════════════════════════════════════════════ */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+@media (min-width: 768px) { .about-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.info-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transition: border-color 0.2s;
+}
+.info-block:hover { border-color: var(--border-h); }
+
+.info-block-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  letter-spacing: 3px;
+  color: var(--text-bright);
+}
+
+.info-block p {
+  font-size: 0.72rem;
+  line-height: 1.8;
+  color: var(--text);
+}
+
+/* Architecture list */
+.arch-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.arch-list li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+.arch-key {
+  color: var(--amber);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.arch-val { color: var(--text); }
+
+/* Dev notes */
+.dev-notes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.dev-notes li {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  padding-left: 1rem;
+  position: relative;
+  font-style: italic;
+  line-height: 1.5;
+}
+.dev-notes li::before {
+  content: '#';
+  position: absolute; left: 0;
+  color: var(--green);
+}
+
+/* System status row */
+.status-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.status-item {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+.status-online   { background: rgba(58,122,58,0.2); border:1px solid var(--green); color: var(--green-bright); }
+.status-stable   { background: rgba(212,136,10,0.15); border:1px solid var(--amber); color: var(--amber); }
+.status-glitch   { background: rgba(204,34,0,0.15); border:1px solid var(--red); color: #ff7744;
+                   animation: glitch-blink 2s step-end infinite; }
+@keyframes glitch-blink { 60%{opacity:1;} 62%{opacity:0.2;} 64%{opacity:1;} }
+
+/* Developer block */
+.dev-card {
+  background: rgba(212,136,10,0.04);
+  border: 1px solid rgba(212,136,10,0.2);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  grid-column: 1 / -1;
+}
+.dev-name {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 4px;
+  color: var(--amber);
+  margin-bottom: 0.5rem;
+}
+.dev-desc {
+  font-size: 0.72rem;
+  line-height: 1.8;
+  color: var(--text);
+}
+.dev-desc em { color: var(--text-bright); font-style: normal; }
+
+/* ════════════════════════════════════════════════════════════
+   FOOTER
+════════════════════════════════════════════════════════════ */
+.site-footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- ── Layers ──────────────────────────────────────────────── -->
+  <div class="page-bg">
+    <!--
+      OPTION A (default): CSS background-image set via --bg-img above.
+      OPTION B (video):   Uncomment below and set opacity in .page-bg video rule.
+    -->
+    <!--
+    <video autoplay muted loop playsinline>
+      <source src="assets/videos/info_bg.mp4" type="video/mp4">
+    </video>
+    -->
+  </div>
+  <div class="crt-overlay"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAGE
+  ═══════════════════════════════════════════════════════════ -->
+  <main class="page">
+
+    <!-- ── HEADER ─────────────────────────────────────────────── -->
+    <header class="site-header">
+      <div class="site-logo">
+        <span class="site-logo-title">FNAF // INFO</span>
+        <span class="site-logo-sub">internal documentation</span>
+      </div>
+      <span class="status-pill">● SYSTEM ONLINE</span>
+      <a href="index.html" class="btn-back">
+        <span class="btn-back-arrow">←</span> Back to menu
+      </a>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════
+         SECTION 1: ANIMATRONIC GUIDE
+    ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="guide">
+      <div class="section-header">
+        <h1 class="section-title">ANIMATRONIC GUIDE</h1>
+        <span class="section-sub">Собранные наблюдения. Not all of them are reliable.</span>
+      </div>
+
+      <div class="cards-grid" id="cards-container">
+        <!-- Cards are injected by JS from ANIMATRONICS data below -->
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         SECTION 2: ABOUT THE SYSTEM
+    ═══════════════════════════════════════════════════════ -->
+    <section class="section" id="about">
+      <div class="section-header">
+        <h2 class="section-title">ABOUT THE SYSTEM</h2>
+        <span class="section-sub">Фрагмент внутренней документации</span>
+      </div>
+
+      <div class="about-grid" id="about-container">
+        <!-- Blocks injected by JS from ABOUT_BLOCKS data below -->
+      </div>
+    </section>
+
+    <!-- ── FOOTER ─────────────────────────────────────────────── -->
+    <footer class="site-footer">
+      <span>© 2026 mauther · Five Nights at Freddy's Web Demo</span>
+      <span>v 1.13 · BUILD STABLE</span>
+    </footer>
+
+  </main>
+
+  <script>
+  /* ══════════════════════════════════════════════════════════════
+     DATA — EDIT HERE TO CHANGE CONTENT
+     ══════════════════════════════════════════════════════════════
+
+     ANIMATRONICS — one object per character.
+     Fields:
+       id          — used for image filename: {id}_guide.png
+       name        — display name (shown in all-caps)
+       desc        — italic flavour text (Russian)
+       observed    — array of observed behaviour strings
+       hints       — array of hint strings (no direct instructions!)
+       threat      — 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+     IMAGE PATH: assets/images/ui/{id}_guide.png
+     Change IMAGE_BASE below to point to a different folder.
+  ══════════════════════════════════════════════════════════════ */
+  const IMAGE_BASE = 'assets/images/ui/';
+
+  const ANIMATRONICS = [
+    {
+      id:       'bonnie',
+      name:     'Bonnie',
+      desc:     'Он всегда был первым. Выходит раньше остальных — ещё когда ночь только начинается. Никто не знает почему.',
+      observed: [
+        'Предпочитает левую часть здания',
+        'Двигается, когда на него не смотрят',
+        'Может долго стоять в одном месте',
+      ],
+      hints: [
+        'Двери существуют не просто так.',
+        'Лучше не терять его из виду.',
+        'Он уже был там. Возможно, всё ещё стоит.',
+      ],
+      threat: 'HIGH',
+    },
+    {
+      id:       'chica',
+      name:     'Chica',
+      desc:     'Она появляется с правой стороны. Тихо. Почти незаметно. Говорят, с кухни иногда слышны странные звуки.',
+      observed: [
+        'Двигается по правому коридору',
+        'Проходит через несколько комнат перед офисом',
+        'Активна, но непредсказуема',
+      ],
+      hints: [
+        'Ты услышишь это раньше, чем увидишь.',
+        'Проверяй правую сторону.',
+        'Даже закрытая дверь — не гарантия.',
+      ],
+      threat: 'HIGH',
+    },
+    {
+      id:       'freddy',
+      name:     'Freddy',
+      desc:     'Он ждёт. Медленно, терпеливо — он движется в темноте. Видеокамеры его раздражают. Или нет?',
+      observed: [
+        'Почти не двигается, пока за ним наблюдают',
+        'Становится активнее к концу ночи',
+        'Атакует только в темноте',
+      ],
+      hints: [
+        'Он не торопится.',
+        'Свет справа — твой союзник.',
+        'Слушай смех. Это предупреждение.',
+      ],
+      threat: 'CRITICAL',
+    },
+    {
+      id:       'foxy',
+      name:     'Foxy',
+      desc:     'Пиратская бухта закрыта. Занавески задёрнуты. Но иногда, если не смотреть слишком долго...',
+      observed: [
+        'Появляется только из Pirate Cove',
+        'Накапливает готовность со временем',
+        'Бежит по левому коридору',
+      ],
+      hints: [
+        'Не забывай о нём — он помнит о тебе.',
+        'Заглядывай туда. Просто заглядывай.',
+        'Закрытая дверь его остановит. Один раз.',
+      ],
+      threat: 'MEDIUM',
+    },
+  ];
+
+  /* ══════════════════════════════════════════════════════════════
+     ABOUT BLOCKS — edit text, add/remove blocks freely.
+     Each block: { type, title, content }
+     Types: 'text' | 'arch' | 'devnotes' | 'status' | 'developer'
+  ══════════════════════════════════════════════════════════════ */
+  const ABOUT_BLOCKS = [
+    {
+      type:  'text',
+      title: 'ОБ ИГРЕ',
+      content: `
+        Это браузерный прототип Five Nights at Freddy's — хоррор-игры
+        от Scott Cawthon. Ты играешь за ночного охранника пиццерии Freddy Fazbear's Pizza.
+        Твоя задача — пережить 5 ночей, наблюдая за аниматрониками через камеры
+        и управляя дверьми и освещением.<br><br>
+        Игра работает полностью в браузере. Никаких загрузок.
+        Никаких дополнительных плагинов. Только ты и темнота.
+      `,
+    },
+    {
+      type:  'arch',
+      title: 'SYSTEM ARCHITECTURE',
+      items: [
+        { key: 'Scene System',      val: 'Одно изображение = одно состояние. Никаких слоёв аниматроников — только готовые сцены.' },
+        { key: 'Animatronic AI',    val: 'Взвешенный граф переходов. Каждый аниматроник имеет уникальную логику движения и атаки.' },
+        { key: 'Camera System',     val: 'Отдельный UI-модуль. Планшет с CCTV-эффектами, мини-картой и переключением камер.' },
+        { key: 'Door System',       val: 'Video overlay для анимации. Двери — отдельный слой, не часть сцены.' },
+        { key: 'Power System',      val: 'Постоянный расход энергии. При 0% — Freddy входит в офис. Toreador March.' },
+      ],
+    },
+    {
+      type:  'devnotes',
+      title: 'DEV NOTES',
+      notes: [
+        'Camera system was harder than expected — multiple rewrites.',
+        'AI still behaves unpredictably on edge cases. As intended.',
+        'Foxy required a completely separate logic module.',
+        'Seamless audio loop = Web Audio API. Standard loop had a gap.',
+        'Rewrote core movement logic multiple times.',
+        'Door video overlay was the trickiest part of the whole project.',
+      ],
+    },
+    {
+      type:   'status',
+      title:  'SYSTEM STATUS',
+      items:  [
+        { label: 'ONLINE',   cls: 'status-online' },
+        { label: 'STABLE',   cls: 'status-stable' },
+        { label: 'GLITCHING',cls: 'status-glitch' },
+      ],
+    },
+    {
+      type:    'developer',
+      // ── EDIT: replace with your name and description ──────────
+      name:    'YOUR NAME HERE',
+      desc:    `Created by <em>YOUR NAME HERE</em>.<br>
+                Браузерная демо-версия создана как учебный проект.<br>
+                Система всё ещё дорабатывается.`,
+    },
+  ];
+
+  /* ══════════════════════════════════════════════════════════════
+     RENDER ANIMATRONIC CARDS
+  ══════════════════════════════════════════════════════════════ */
+  function renderCards() {
+    const container = document.getElementById('cards-container');
+    if (!container) return;
+
+    ANIMATRONICS.forEach((char, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.animationDelay = `${i * 0.1}s`;
+      card.style.animation = `fade-up 0.6s ease ${i * 0.1}s both`;
+
+      const imgSrc = `${IMAGE_BASE}${char.id}_guide.png`;
+
+      card.innerHTML = `
+        <div class="card-img-wrap">
+          <img class="card-img"
+               src="${imgSrc}"
+               alt="${char.name}"
+               loading="lazy"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="card-img-placeholder" style="display:none">
+            IMAGE UNAVAILABLE
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="card-name">${char.name.toUpperCase()}</div>
+
+          <p class="card-desc">${char.desc}</p>
+
+          <div>
+            <div class="card-label">OBSERVED BEHAVIOR</div>
+            <ul class="obs-list">
+              ${char.observed.map(o => `<li>${o}</li>`).join('')}
+            </ul>
+          </div>
+
+          <div>
+            <div class="card-label">HINTS</div>
+            <ul class="hints-list">
+              ${char.hints.map(h => `<li>${h}</li>`).join('')}
+            </ul>
+          </div>
+
+          <div>
+            <div class="card-label">THREAT LEVEL</div>
+            <span class="threat-badge threat-${char.threat}">${char.threat}</span>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     RENDER ABOUT BLOCKS
+  ══════════════════════════════════════════════════════════════ */
+  function renderAbout() {
+    const container = document.getElementById('about-container');
+    if (!container) return;
+
+    ABOUT_BLOCKS.forEach(block => {
+      if (block.type === 'text') {
+        container.innerHTML += `
+          <div class="info-block">
+            <div class="info-block-title">${block.title}</div>
+            <p>${block.content}</p>
+          </div>`;
+
+      } else if (block.type === 'arch') {
+        container.innerHTML += `
+          <div class="info-block">
+            <div class="info-block-title">${block.title}</div>
+            <ul class="arch-list">
+              ${block.items.map(i => `
+                <li>
+                  <span class="arch-key">${i.key}</span>
+                  <span class="arch-val">${i.val}</span>
+                </li>`).join('')}
+            </ul>
+          </div>`;
+
+      } else if (block.type === 'devnotes') {
+        container.innerHTML += `
+          <div class="info-block">
+            <div class="info-block-title">${block.title}</div>
+            <ul class="dev-notes">
+              ${block.notes.map(n => `<li>${n}</li>`).join('')}
+            </ul>
+          </div>`;
+
+      } else if (block.type === 'status') {
+        container.innerHTML += `
+          <div class="info-block">
+            <div class="info-block-title">${block.title}</div>
+            <div class="status-grid">
+              ${block.items.map(s => `<span class="status-item ${s.cls}">${s.label}</span>`).join('')}
+            </div>
+          </div>`;
+
+      } else if (block.type === 'developer') {
+        container.innerHTML += `
+          <div class="dev-card">
+            <div class="dev-name">${block.name}</div>
+            <p class="dev-desc">${block.desc}</p>
+          </div>`;
+      }
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     INIT
+  ══════════════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    renderCards();
+    renderAbout();
+  });
+  </script>
+</body>
+</html>

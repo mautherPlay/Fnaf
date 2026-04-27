@@ -2,96 +2,194 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Five Nights at Freddy's</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/menu.css">
 </head>
 <body>
 
-  <div id="menu-noise"></div>
+  <div class="background" id="menu-bg">
+    <video id="menu-bg-video" muted loop playsinline preload="auto">
+      <source src="assets/videos/menu_bg.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="noise-overlay"></div>
 
-  <div id="menu-container">
-
-    <header id="menu-header">
-      <p id="menu-subtitle">FIVE NIGHTS AT</p>
-      <h1 id="menu-title">FREDDY'S</h1>
-      <p id="menu-edition">Browser Edition</p>
-    </header>
-
-    <main id="night-select">
-      <p id="select-label">SELECT NIGHT</p>
-      <div id="night-buttons">
-        <!-- Populated by the script below -->
+  <!-- ── Horror warning modal ─────────────────────────────── -->
+  <div id="warning-modal">
+    <div id="warning-box">
+      <div id="warning-header">
+        <span id="warning-icon">⚠</span>
+        <span id="warning-title">VIEWER DISCRETION ADVISED</span>
       </div>
-    </main>
-
-    <footer id="menu-footer">
-      <p>Progress is saved automatically in your browser.</p>
-      <!--
-        TODO Firebase: replace the paragraph above with a login form.
-        All Firebase integration points are marked with TODO comments
-        inside js/SaveSystem.js — no other file needs to change.
-      -->
-    </footer>
-
+      <div id="warning-body">
+        <p>This game contains <strong>sudden loud sounds</strong>,<br>
+           <strong>flashing images</strong>, and <strong>horror content</strong>.</p>
+        <p>It may cause distress in sensitive individuals.</p>
+        <p class="warning-small">Not recommended for those with anxiety disorders,<br>
+           a history of PTSD, or who are easily startled.</p>
+      </div>
+      <button id="warning-btn">I UNDERSTAND — ENTER</button>
+      <p id="warning-sub">Five Nights at Freddy's — Web Demo</p>
+    </div>
   </div>
 
-  <!--
-    Load order:
-      1. EventBus  (SaveSystem emits events)
-      2. SaveSystem (reads / writes localStorage)
-      3. Inline script (builds the night buttons)
-  -->
+  <!-- ── Main menu ─────────────────────────────────────────── -->
+  <div class="menu-wrap" id="menu-wrap" style="display:none">
+    <div class="title-block">
+      <div class="title-line">Five</div>
+      <div class="title-line">Nights</div>
+      <div class="title-line title-at">at</div>
+      <div class="title-line">Freddy's</div>
+      <div class="title-sub">WEB Demo</div>
+    </div>
+    <nav class="nav-block">
+      <button class="nav-btn active" id="btn-new-game">
+        <span class="nav-arrow">&gt;&gt;</span> New Game
+      </button>
+      <button class="nav-btn" id="btn-continue" disabled>
+        <span class="nav-arrow nav-arrow-off">&gt;&gt;</span> Continue
+      </button>
+    </nav>
+  </div>
+
+  <footer class="menu-footer" id="menu-footer" style="display:none">
+    <span class="footer-ver">v 1.13</span>
+    <span class="footer-copy">©2026 mauther</span>
+  </footer>
+
+  <!-- Night 1 intro video -->
+  <div id="intro-overlay" style="display:none">
+    <video id="intro-video" preload="auto" playsinline>
+      <source src="assets/videos/intro.mp4" type="video/mp4">
+    </video>
+    <div class="intro-skip">tap to skip</div>
+  </div>
+
   <script src="js/EventBus.js"></script>
   <script src="js/SaveSystem.js"></script>
   <script>
   (function () {
     'use strict';
 
-    const save      = new SaveSystem();
-    const progress  = save.load();           // { completedNights:[], highestNight:0 }
-    const container = document.getElementById('night-buttons');
+    const save         = new SaveSystem();
+    const progress     = save.load();
+    const highestNight = progress.highestNight || 0;
+    const canContinue  = highestNight >= 1;
 
-    for (let n = 1; n <= 5; n++) {
-      const unlocked  = save.isNightUnlocked(n);
-      const completed = progress.completedNights.includes(n);
+    const warningModal = document.getElementById('warning-modal');
+    const warningBtn   = document.getElementById('warning-btn');
+    const menuWrap     = document.getElementById('menu-wrap');
+    const menuFooter   = document.getElementById('menu-footer');
+    const bgVideo      = document.getElementById('menu-bg-video');
 
-      const btn = document.createElement('button');
-      btn.className =
-        'night-btn' +
-        (unlocked  ? ' unlocked'  : ' locked') +
-        (completed ? ' completed' : '');
+    // ── Check if user already confirmed this session ──────────
+    // sessionStorage persists for the browser tab lifetime only.
+    // So returning from game.html → index.html in the same tab
+    // skips the modal.  A fresh tab / new window shows it again.
+    const alreadyConfirmed = sessionStorage.getItem('fnaf_warned') === '1';
 
-      btn.innerHTML = unlocked
-        ? `<span class="night-num">${n}</span>
-           <span class="night-label">Night ${n}</span>
-           ${completed ? '<span class="night-star">★</span>' : ''}`
-        : `<span class="night-num lock-icon">🔒</span>
-           <span class="night-label">Night ${n}</span>`;
-
-      if (unlocked) {
-        btn.title = completed ? `Night ${n} — completed` : `Start Night ${n}`;
-        btn.addEventListener('click', () => {
-          window.location.href = 'game.html?night=' + n;
-        });
-      } else {
-        btn.disabled = true;
-        btn.title    = `Complete Night ${n - 1} to unlock`;
-      }
-
-      container.appendChild(btn);
+    if (alreadyConfirmed) {
+      // Skip modal — show menu immediately and start media
+      warningModal.style.display = 'none';
+      showMenu();
+      startBgVideo();
+      startMenuMusic();
+    } else {
+      // Show modal — wait for click
+      warningBtn.addEventListener('click', function () {
+        sessionStorage.setItem('fnaf_warned', '1');
+        warningModal.style.display = 'none';
+        showMenu();
+        startBgVideo();
+        startMenuMusic();
+      });
     }
 
-    // Hidden dev shortcut: SHIFT + click the footer resets all progress
-    document.getElementById('menu-footer').addEventListener('click', function (e) {
-      if (e.shiftKey && confirm('Reset all progress?')) {
-        save.clearAll();
-        window.location.reload();
+    // ── Show menu elements ────────────────────────────────────
+    function showMenu() {
+      menuWrap.style.display   = 'flex';
+      menuFooter.style.display = 'flex';
+
+      if (canContinue) {
+        const btnCont = document.getElementById('btn-continue');
+        btnCont.disabled = false;
+        btnCont.querySelector('.nav-arrow').classList.remove('nav-arrow-off');
       }
-    });
+      setupButtons();
+    }
+
+    // ── Background video ──────────────────────────────────────
+    function startBgVideo() {
+      if (bgVideo) bgVideo.play().catch(() => {});
+    }
+
+    // ── Music ─────────────────────────────────────────────────
+    let menuAudio = null;
+
+    function startMenuMusic() {
+      menuAudio = new Audio('assets/sounds/menu_music.mp3');
+      menuAudio.loop   = true;
+      menuAudio.volume = 0.6;
+      menuAudio.play().catch(() => {});
+    }
+
+    function stopMenuMusic() {
+      if (menuAudio) { menuAudio.pause(); menuAudio.src = ''; menuAudio = null; }
+    }
+
+    // ── Button logic ──────────────────────────────────────────
+    function setupButtons() {
+      const btnNew  = document.getElementById('btn-new-game');
+      const btnCont = document.getElementById('btn-continue');
+      let activeBtn = btnNew;
+
+      function setActive(btn) {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeBtn = btn;
+      }
+
+      btnNew.addEventListener('mouseenter',  () => setActive(btnNew));
+      btnCont.addEventListener('mouseenter', () => { if (!btnCont.disabled) setActive(btnCont); });
+
+      btnNew.addEventListener('click',  () => { stopMenuMusic(); startGame(1, true);  });
+      btnCont.addEventListener('click', () => {
+        if (btnCont.disabled) return;
+        stopMenuMusic();
+        startGame(Math.min(highestNight + 1, 5), false);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+          e.preventDefault();
+          const other = (activeBtn === btnNew) ? btnCont : btnNew;
+          if (!other.disabled) setActive(other);
+        }
+        if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); activeBtn.click(); }
+      });
+    }
+
+    // ── Start game ────────────────────────────────────────────
+    function startGame(night, showIntro) {
+      if (showIntro && night === 1) playIntroThenGo(night);
+      else goToGame(night);
+    }
+
+    function goToGame(night) {
+      window.location.href = `game.html?night=${night}`;
+    }
+
+    function playIntroThenGo(night) {
+      const overlay = document.getElementById('intro-overlay');
+      const video   = document.getElementById('intro-video');
+      overlay.style.display = 'flex';
+      const go = () => { video.pause(); goToGame(night); };
+      video.onended = go;
+      video.onerror = go;
+      video.play().catch(go);
+      overlay.addEventListener('click', go, { once: true });
+    }
 
   }());
   </script>

@@ -1,42 +1,29 @@
 'use strict';
 
 /**
- * GameState — single source of truth for the entire game.
- * No logic here; only data + helpers.
+ * GameState — single source of truth.
  */
 class GameState {
-  constructor() {
-    this._init();
-  }
+  constructor() { this._init(); }
 
   _init() {
-    // ── Meta ────────────────────────────────────────────────────
     this.phase = 'MENU';
-    // Phases: MENU | NIGHT_INTRO | OFFICE | CAMERA |
-    //         JUMPSCARE | POWER_OUT | GAME_OVER | WIN
-
     this.night = 1;
-    this.hour  = 0;   // 0 = 12 AM … 6 = 6 AM
-
-    // ── Power ────────────────────────────────────────────────────
+    this.hour  = 0;
     this.power = 100;
 
-    // ── Doors & lights ───────────────────────────────────────────
-    this.leftDoor  = 'OPEN';   // OPEN | CLOSING | CLOSED | OPENING
+    this.leftDoor  = 'OPEN';
     this.rightDoor = 'OPEN';
     this.leftLight  = false;
     this.rightLight = false;
 
-    // ── Camera UI ────────────────────────────────────────────────
-    this.cameraOpen         = false;
-    this.activeCam          = '1A';
+    this.cameraOpen          = false;
+    this.activeCam           = '1A';
     this.cameraTransitioning = false;
 
-    // ── Office pan (0 = left, 0.5 = centre, 1 = right) ──────────
     this.panTarget  = 0.5;
     this.panCurrent = 0.5;
 
-    // ── Animatronics ─────────────────────────────────────────────
     this.animatronics = {
       freddy: this._makeAnim('STAGE', false),
       bonnie: this._makeAnim('STAGE', true),
@@ -44,46 +31,40 @@ class GameState {
       foxy:   this._makeFoxy(),
     };
 
-    // ── Jumpscare ────────────────────────────────────────────────
     this.jumpscareTarget = null;
     this.caughtBy        = '';
-
-    // ── Power-out state ──────────────────────────────────────────
-    this.powerOutPhase = 0;
-    // 0 = idle, 1 = music playing, 2 = freddy at doorway, 3 = jumpscare
-
-    // ── Misc flags ───────────────────────────────────────────────
-    this.foxyKnocking   = false;
-    this.staticActive   = false;
-    this.nightRunning   = false;
+    this.powerOutPhase   = 0;
+    this.nightRunning    = false;
   }
 
-  // ── Factories ─────────────────────────────────────────────────
   _makeAnim(startPos, active) {
     return {
       position:     startPos,
       active,
       aiLevel:      0,
-      tickTimer:    0,       // accumulated ms since last AI tick
-      attackTimer:  0,       // accumulated ms since last attack check
       routeIndex:   0,
-      facingCamera: false,   // Freddy special: facing camera flag
+      facingCamera: false,
     };
   }
 
   _makeFoxy() {
     return {
-      position:   'PIRATE_COVE',
-      active:     true,
-      aiLevel:    0,
-      phase:      0,         // 0-3 curtain stage
-      phaseTimer: 0,         // seconds without looking at Pirate Cove
-      running:    false,
-      runTimer:   0,
+      position:      'PIRATE_COVE',
+      active:        true,
+      aiLevel:       0,
+      // Phase curtain state (0–3)
+      phase:         0,
+      phaseTimer:    0,    // accumulated "ready-time" in seconds
+      // Run state
+      running:       false,
+      runTimer:      0,
+      // New: waiting to run while cameras are open
+      waitingToRun:  false,
+      // New: peek video already shown for this run cycle
+      peekShown:     false,
     };
   }
 
-  // ── Helpers ───────────────────────────────────────────────────
   setPhase(p) {
     if (this.phase === p) return;
     this.phase = p;
@@ -99,10 +80,9 @@ class GameState {
     return d === 'CLOSED' || d === 'CLOSING';
   }
 
-  /** Reset everything for a fresh night */
   reset(night) {
-    const oldNight = this.night;
+    const n = night || this.night;
     this._init();
-    this.night = night || oldNight;
+    this.night = n;
   }
 }
