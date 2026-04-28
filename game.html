@@ -24,12 +24,6 @@
             style="position:absolute;top:0;left:85px;width:250px;height:540px;object-fit:fill;z-index:10;display:none;"></video>
           <video id="door-right-video" preload="auto" muted playsinline
             style="position:absolute;top:0;left:1530px;width:250px;height:540px;object-fit:fill;z-index:10;display:none;"></video>
-          <!--
-            FAN VIDEO OVERLAY
-            Coordinates in 1920px scene-background space.
-            Provided by user for 1200×540 layout: left=586 top=232 w=100 h=142.
-            These are already in scene-background (1920px) coordinate space.
-          -->
           <video id="fan-video"
             src="assets/videos/fan_loop.mp4"
             preload="auto" muted playsinline loop autoplay
@@ -37,27 +31,16 @@
                    width:165px;height:147px;object-fit:fill;
                    z-index:8;display:block;pointer-events:none;">
           </video>
-
-          <!-- Fan hitbox — covers fan exactly, stopPropagation prevents pan interference -->
           <div id="fan-hitbox"
             style="position:absolute;top:227.4px;left:936px;
                    width:165px;height:146px;
                    z-index:15;cursor:pointer;">
           </div>
-
-          <!--
-            FREDDY'S NOSE BUTTON
-            Normalized x=0.412 y=0.313 w=0.0225 h=0.046 relative to 1200×540.
-            In 1920px background (centered pan = +360 offset):
-              left = 360 + 0.412×1200 = 854px  top = 0.313×540 = 169px
-              w = 0.0225×1200 = 27px            h = 0.046×540 = 25px
-          -->
           <div id="nose-hitbox"
             style="position:absolute;top:169px;left:800px;
                    width:27px;height:25px;
                    z-index:15;cursor:pointer;">
           </div>
-
           <div id="panel-left-container" class="panel-container">
             <img id="panel-left-img" src="" alt="" draggable="false" class="panel-img">
             <div id="btn-left-door"  class="panel-btn" data-side="left"  data-action="door"></div>
@@ -86,8 +69,6 @@
           </div>
         </div>
 
-        <!-- Camera HUD: REC + room name + minimap only
-             Power / Time / Night live in #hud (z-40) -->
         <div id="cam-hud">
 
           <div id="cam-rec-wrap">
@@ -97,19 +78,12 @@
 
           <div id="cam-room-name">SHOW STAGE</div>
 
-          <!--
-            MINIMAP: viewBox="0 0 399 341" = original Figma frame.
-            Container is 379x324px (scale 0.95).
-            Background is TRANSPARENT — only lines and nodes render.
-            CAM 7 (Bathrooms) is at Figma coords: x=324 y=90 w=53 h=34.
-          -->
           <div id="cam-minimap">
             <svg id="cam-map-svg"
                  viewBox="0 0 399 341"
                  xmlns="http://www.w3.org/2000/svg"
                  shape-rendering="crispEdges">
 
-              <!-- ══ CORRIDOR LINES from Figma ══ -->
               <g fill="#D9D9D9" opacity="0.5">
                 <rect x="317" y="84"  width="2"   height="107"/>
                 <rect x="317" y="82"  width="27"  height="2"/>
@@ -185,7 +159,6 @@
                 <rect x="264" y="274" width="2"   height="2"/>
               </g>
 
-              <!-- ══ YOU ══ -->
               <g id="map-you">
                 <rect x="182" y="268" width="38" height="55" rx="1"
                       fill="#1a1a1a" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
@@ -195,68 +168,55 @@
                       text-anchor="middle" dominant-baseline="middle">YOU</text>
               </g>
 
-              <!-- ══ CAMERA NODES ══ -->
-
               <g class="map-node" data-cam="5">
                 <rect x="22"  y="90"  width="53" height="34" rx="1"/>
                 <text x="48"  y="107">CAM 5</text>
               </g>
-
               <g class="map-node" data-cam="1C">
                 <rect x="89"  y="137" width="53" height="34" rx="1"/>
                 <text x="115" y="154">CAM 1C</text>
               </g>
-
               <g class="map-node" data-cam="1B">
                 <rect x="116" y="65"  width="53" height="34" rx="1"/>
                 <text x="142" y="82">CAM 1B</text>
               </g>
-
               <g class="map-node" data-cam="1A">
                 <rect x="134" y="15"  width="53" height="34" rx="1"/>
                 <text x="160" y="32">CAM 1A</text>
               </g>
-
               <g class="map-node" data-cam="3">
                 <rect x="58"  y="225" width="53" height="34" rx="1"/>
                 <text x="84"  y="242">CAM 3</text>
               </g>
-
               <g class="map-node" data-cam="2A">
                 <rect x="134" y="239" width="53" height="34" rx="1"/>
                 <text x="160" y="256">CAM 2A</text>
               </g>
-
               <g class="map-node" data-cam="2B">
                 <rect x="134" y="276" width="53" height="34" rx="1"/>
                 <text x="160" y="293">CAM 2B</text>
               </g>
-
               <g class="map-node" data-cam="4A">
                 <rect x="231" y="240" width="53" height="34" rx="1"/>
                 <text x="257" y="257">CAM 4A</text>
               </g>
-
               <g class="map-node" data-cam="4B">
                 <rect x="231" y="276" width="53" height="34" rx="1"/>
                 <text x="257" y="293">CAM 4B</text>
               </g>
-
               <g class="map-node" data-cam="6">
                 <rect x="317" y="208" width="53" height="34" rx="1"/>
                 <text x="343" y="225">CAM 6</text>
               </g>
-
-              <!-- CAM 7 Bathrooms — Figma coords: left=324 top=90 w=53 h=34 -->
               <g class="map-node" data-cam="7">
                 <rect x="324" y="90"  width="53" height="34" rx="1"/>
                 <text x="350" y="107">CAM 7</text>
               </g>
 
             </svg>
-          </div><!-- /cam-minimap -->
+          </div>
 
-        </div><!-- /cam-hud -->
+        </div>
 
         <div id="cam-trigger-zone" style="display:none">
           <svg class="trigger-svg" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg">
@@ -265,7 +225,7 @@
           </svg>
         </div>
 
-      </div><!-- /camera-view -->
+      </div>
 
       <!-- ════ POWER-OUT ═══════════════════════════════════════ -->
       <div id="power-out-view" style="display:none">
@@ -309,6 +269,18 @@
             <button id="btn-menu-go">Menu</button>
           </div>
         </div>
+        <!--
+          ЗАДАЧА 3 — кнопка "Need help?" на экране Game Over.
+          Стили в game.css (#btn-need-help).
+          Позиционирована внизу слева, противоположный угол от GAME OVER.
+          onclick устанавливает fnaf_warned чтобы при возврате
+          в меню модалка не появилась.
+        -->
+        <a id="btn-need-help"
+           href="info.html"
+           onclick="sessionStorage.setItem('fnaf_warned','1')">
+          Need help?
+        </a>
       </div>
 
       <div id="win-overlay" style="display:none">

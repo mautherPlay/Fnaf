@@ -10,7 +10,7 @@
   <style>
 
 /* ════════════════════════════════════════════════════════════
-   CSS CUSTOM PROPERTIES  — edit here to restyle the whole page
+   CSS CUSTOM PROPERTIES
 ════════════════════════════════════════════════════════════ */
 :root {
   --bg:          #050505;
@@ -19,9 +19,7 @@
   --border:      rgba(255,255,255,0.08);
   --border-h:    rgba(255,255,255,0.18);
   --red:         #cc2200;
-  --red-glow:    rgba(204,34,0,0.35);
   --amber:       #d4880a;
-  --amber-dim:   rgba(212,136,10,0.15);
   --green:       #3a7a3a;
   --green-bright:#7dff7d;
   --text:        #c8c8c8;
@@ -32,7 +30,6 @@
   --radius:      4px;
   --radius-lg:   8px;
 
-  /* Threat level colours — change to restyle badge colours */
   --threat-low:      #2a6a2a;
   --threat-low-text: #7dff7d;
   --threat-med:      #6a5a00;
@@ -47,9 +44,7 @@
    RESET + BASE
 ════════════════════════════════════════════════════════════ */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-
 html { scroll-behavior: smooth; }
-
 body {
   background: var(--bg);
   color: var(--text);
@@ -60,9 +55,7 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
-   BACKGROUND LAYER
-   Replace background-image URL to change the backdrop.
-   Video option: uncomment <video> in HTML.
+   BACKGROUND + CRT
 ════════════════════════════════════════════════════════════ */
 .page-bg {
   position: fixed; inset: 0; z-index: 0;
@@ -74,19 +67,8 @@ body {
 .page-bg::after {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0.90) 100%);
+  background: linear-gradient(180deg,rgba(0,0,0,0.85)0%,rgba(0,0,0,0.65)50%,rgba(0,0,0,0.90)100%);
 }
-/* Optional video background — uncomment <video> in HTML */
-.page-bg video {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  opacity: 0.35;
-}
-
-/* ════════════════════════════════════════════════════════════
-   CRT OVERLAY  (noise + scanlines)
-════════════════════════════════════════════════════════════ */
 .crt-overlay {
   position: fixed; inset: 0; z-index: 1;
   pointer-events: none;
@@ -94,11 +76,7 @@ body {
 .crt-overlay::before {
   content: '';
   position: absolute; inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0, transparent 2px,
-    rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 3px
-  );
+  background: repeating-linear-gradient(to bottom,transparent 0,transparent 2px,rgba(0,0,0,0.12)2px,rgba(0,0,0,0.12)3px);
 }
 .crt-overlay::after {
   content: '';
@@ -116,7 +94,7 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
-   LAYOUT WRAPPER
+   LAYOUT
 ════════════════════════════════════════════════════════════ */
 .page {
   position: relative; z-index: 2;
@@ -126,7 +104,7 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
-   SITE HEADER
+   HEADER
 ════════════════════════════════════════════════════════════ */
 .site-header {
   display: flex;
@@ -142,7 +120,6 @@ body {
   from { opacity:0; transform:translateY(-12px); }
   to   { opacity:1; transform:translateY(0); }
 }
-
 .site-logo {
   display: flex;
   align-items: baseline;
@@ -150,7 +127,7 @@ body {
 }
 .site-logo-title {
   font-family: var(--font-display);
-  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-size: clamp(1.4rem,4vw,2.2rem);
   letter-spacing: 4px;
   color: var(--text-bright);
   text-shadow: 0 0 20px rgba(255,255,255,0.12);
@@ -174,6 +151,85 @@ body {
 }
 @keyframes status-pulse { 0%,100%{opacity:1;} 50%{opacity:0.55;} }
 
+/* Header right: toggle + back button together */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* ════════════════════════════════════════════════════════════
+   LANGUAGE TOGGLE SWITCH
+════════════════════════════════════════════════════════════ */
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 0.2s, background 0.2s;
+  animation: toggle-flicker 5s ease-in-out infinite;
+}
+.lang-toggle:hover {
+  border-color: var(--border-h);
+  background: var(--surface-h);
+  animation-play-state: paused;
+}
+@keyframes toggle-flicker {
+  0%,88%,100% { opacity:1; }
+  90%          { opacity:0.7; }
+  91%          { opacity:1; }
+  93%          { opacity:0.5; }
+  94%          { opacity:1; }
+}
+
+.lang-label {
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  transition: color 0.2s;
+  line-height: 1;
+}
+.lang-label.active { color: var(--text-bright); }
+
+/* Track */
+.toggle-track {
+  position: relative;
+  width: 36px;
+  height: 18px;
+  background: #5a2a2a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 9px;
+  transition: background 0.25s ease;
+  flex-shrink: 0;
+}
+.toggle-track.is-en {
+  background: #3a5f3a;
+}
+
+/* Thumb */
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: #c0c0c0;
+  border-radius: 50%;
+  transition: transform 0.25s ease;
+  box-shadow: 0 0 3px rgba(0,0,0,0.5);
+}
+.toggle-track.is-en .toggle-thumb {
+  transform: translateX(18px);
+}
+
+/* Back button */
 .btn-back {
   display: inline-flex;
   align-items: center;
@@ -195,22 +251,21 @@ body {
 }
 .btn-back:hover  { border-color: var(--border-h); color: var(--text-bright); background: var(--surface-h); }
 .btn-back:active { transform: scale(0.97); }
-.btn-back-arrow  { font-size: 1em; }
 
 /* ════════════════════════════════════════════════════════════
-   SECTION WRAPPER + TITLE
+   SECTION
 ════════════════════════════════════════════════════════════ */
 .section {
   margin-top: 4rem;
   animation: fade-up 0.7s ease both;
 }
-.section:nth-child(2) { animation-delay: 0.15s; }
-.section:nth-child(3) { animation-delay: 0.25s; }
+.section:nth-child(2) { animation-delay: 0.1s; }
+.section:nth-child(3) { animation-delay: 0.2s; }
+.section:nth-child(4) { animation-delay: 0.3s; }
 @keyframes fade-up {
   from { opacity:0; transform:translateY(18px); }
   to   { opacity:1; transform:translateY(0); }
 }
-
 .section-header {
   display: flex;
   align-items: baseline;
@@ -218,10 +273,11 @@ body {
   margin-bottom: 2.5rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 .section-title {
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-size: clamp(1.8rem,5vw,3rem);
   letter-spacing: 4px;
   color: var(--text-bright);
   line-height: 1;
@@ -234,17 +290,16 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════
-   ANIMATRONIC CARDS GRID
+   CARDS GRID
 ════════════════════════════════════════════════════════════ */
 .cards-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.25rem;
 }
-@media (min-width: 640px)  { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1024px) { .cards-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width:640px)  { .cards-grid { grid-template-columns: repeat(2,1fr); } }
+@media (min-width:1024px) { .cards-grid { grid-template-columns: repeat(4,1fr); } }
 
-/* ─── Single card ─────────────────────────────────────────── */
 .card {
   position: relative;
   background: var(--surface);
@@ -254,14 +309,9 @@ body {
   display: flex;
   flex-direction: column;
   transition: border-color 0.22s, transform 0.22s;
-  /* Staggered entrance animation — set via inline style */
 }
-.card:hover {
-  border-color: var(--border-h);
-  transform: translateY(-3px);
-}
+.card:hover { border-color: var(--border-h); transform: translateY(-3px); }
 
-/* Image area — 16:10 ratio */
 .card-img-wrap {
   aspect-ratio: 16/10;
   overflow: hidden;
@@ -271,27 +321,20 @@ body {
 .card-img-wrap::after {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7) 100%);
+  background: linear-gradient(to bottom,transparent 50%,rgba(0,0,0,0.7)100%);
 }
 .card-img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  display: block;
-  /* Slightly desaturated like a CCTV feed */
+  width:100%; height:100%;
+  object-fit:cover; object-position:center top;
+  display:block;
   filter: grayscale(0.25) contrast(1.05);
   transition: transform 0.4s ease, filter 0.4s ease;
 }
-.card:hover .card-img {
-  transform: scale(1.04);
-  filter: grayscale(0) contrast(1.1);
-}
-
-/* Placeholder when image is missing */
+.card:hover .card-img { transform:scale(1.04); filter:grayscale(0) contrast(1.1); }
 .card-img-placeholder {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.65rem; letter-spacing: 3px; color: var(--text-dim);
+  width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.65rem; letter-spacing:3px; color:var(--text-dim);
 }
 
 .card-body {
@@ -301,7 +344,6 @@ body {
   gap: 1rem;
   flex: 1;
 }
-
 .card-name {
   font-family: var(--font-display);
   font-size: 1.75rem;
@@ -309,7 +351,6 @@ body {
   color: var(--text-bright);
   line-height: 1;
 }
-
 .card-desc {
   font-size: 0.72rem;
   line-height: 1.75;
@@ -318,8 +359,6 @@ body {
   border-left: 2px solid var(--border);
   padding-left: 0.75rem;
 }
-
-/* Sub-section labels inside card */
 .card-label {
   font-size: 0.6rem;
   letter-spacing: 3px;
@@ -329,162 +368,116 @@ body {
   padding-bottom: 0.25rem;
   border-bottom: 1px solid var(--border);
 }
-
-.obs-list {
+.obs-list, .hints-list {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
 .obs-list li {
-  font-size: 0.68rem;
-  line-height: 1.5;
-  padding-left: 1rem;
-  position: relative;
-  color: var(--text);
+  font-size: 0.68rem; line-height: 1.5;
+  padding-left: 1rem; position: relative; color: var(--text);
 }
-.obs-list li::before {
-  content: '›';
-  position: absolute; left: 0;
-  color: var(--text-dim);
-}
-
-.hints-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
+.obs-list li::before { content:'›'; position:absolute; left:0; color:var(--text-dim); }
 .hints-list li {
-  font-size: 0.68rem;
-  line-height: 1.5;
-  color: #aaa;
-  padding-left: 1.2rem;
-  position: relative;
+  font-size: 0.68rem; line-height: 1.5;
+  color: #aaa; padding-left: 1.2rem; position: relative;
 }
 .hints-list li::before {
-  content: '⚠';
-  position: absolute; left: 0;
-  color: var(--amber);
-  font-size: 0.6em;
-  top: 0.15em;
+  content:'⚠'; position:absolute; left:0;
+  color:var(--amber); font-size:0.6em; top:0.15em;
 }
-
-/* Threat level badge */
 .threat-badge {
   align-self: flex-start;
-  font-size: 0.62rem;
-  letter-spacing: 3px;
-  padding: 0.3rem 0.7rem;
-  border-radius: 2px;
-  text-transform: uppercase;
-  font-weight: 600;
+  font-size: 0.62rem; letter-spacing: 3px;
+  padding: 0.3rem 0.7rem; border-radius: 2px;
+  text-transform: uppercase; font-weight: 600;
 }
-.threat-LOW      { background: var(--threat-low);  color: var(--threat-low-text);  border:1px solid var(--threat-low-text); }
-.threat-MEDIUM   { background: var(--threat-med);  color: var(--threat-med-text);  border:1px solid var(--threat-med-text); }
-.threat-HIGH     { background: var(--threat-high); color: var(--threat-high-text); border:1px solid var(--threat-high-text); }
-.threat-CRITICAL { background: var(--threat-crit); color: var(--threat-crit-text); border:1px solid var(--threat-crit-text); animation: crit-pulse 1.5s step-end infinite; }
+.threat-LOW      { background:var(--threat-low);  color:var(--threat-low-text);  border:1px solid var(--threat-low-text); }
+.threat-MEDIUM   { background:var(--threat-med);  color:var(--threat-med-text);  border:1px solid var(--threat-med-text); }
+.threat-HIGH     { background:var(--threat-high); color:var(--threat-high-text); border:1px solid var(--threat-high-text); }
+.threat-CRITICAL { background:var(--threat-crit); color:var(--threat-crit-text); border:1px solid var(--threat-crit-text); animation:crit-pulse 1.5s step-end infinite; }
 @keyframes crit-pulse { 50%{opacity:0.7;} }
 
 /* ════════════════════════════════════════════════════════════
-   ABOUT SECTION — info blocks
+   ABOUT GRID
 ════════════════════════════════════════════════════════════ */
 .about-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.25rem;
 }
-@media (min-width: 768px) { .about-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width:768px) { .about-grid { grid-template-columns: repeat(2,1fr); } }
 
 .info-block {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
+  display: flex; flex-direction: column; gap: 0.85rem;
   transition: border-color 0.2s;
 }
 .info-block:hover { border-color: var(--border-h); }
-
 .info-block-title {
   font-family: var(--font-display);
-  font-size: 1.2rem;
-  letter-spacing: 3px;
+  font-size: 1.2rem; letter-spacing: 3px;
   color: var(--text-bright);
 }
-
 .info-block p {
-  font-size: 0.72rem;
-  line-height: 1.8;
-  color: var(--text);
+  font-size: 0.72rem; line-height: 1.8; color: var(--text);
 }
 
-/* Architecture list */
-.arch-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
+.arch-list { list-style:none; display:flex; flex-direction:column; gap:0.6rem; }
 .arch-list li {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.75rem;
-  align-items: baseline;
-  font-size: 0.68rem;
-  line-height: 1.5;
+  display:grid; grid-template-columns:auto 1fr;
+  gap:0.75rem; align-items:baseline;
+  font-size:0.68rem; line-height:1.5;
 }
-.arch-key {
-  color: var(--amber);
-  letter-spacing: 1px;
-  white-space: nowrap;
-  font-weight: 600;
-}
-.arch-val { color: var(--text); }
+.arch-key { color:var(--amber); letter-spacing:1px; white-space:nowrap; font-weight:600; }
+.arch-val  { color:var(--text); }
 
-/* Dev notes */
-.dev-notes {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+.dev-notes { list-style:none; display:flex; flex-direction:column; gap:0.5rem; }
 .dev-notes li {
-  font-size: 0.68rem;
-  color: var(--text-dim);
-  padding-left: 1rem;
-  position: relative;
-  font-style: italic;
-  line-height: 1.5;
+  font-size:0.68rem; color:var(--text-dim);
+  padding-left:1rem; position:relative;
+  font-style:italic; line-height:1.5;
 }
-.dev-notes li::before {
-  content: '#';
-  position: absolute; left: 0;
-  color: var(--green);
-}
+.dev-notes li::before { content:'#'; position:absolute; left:0; color:var(--green); }
 
-/* System status row */
-.status-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
+.status-grid { display:flex; flex-wrap:wrap; gap:0.6rem; }
 .status-item {
-  font-size: 0.6rem;
-  letter-spacing: 2px;
-  padding: 0.25rem 0.65rem;
-  border-radius: 2px;
-  text-transform: uppercase;
+  font-size:0.6rem; letter-spacing:2px;
+  padding:0.25rem 0.65rem; border-radius:2px; text-transform:uppercase;
 }
-.status-online   { background: rgba(58,122,58,0.2); border:1px solid var(--green); color: var(--green-bright); }
-.status-stable   { background: rgba(212,136,10,0.15); border:1px solid var(--amber); color: var(--amber); }
-.status-glitch   { background: rgba(204,34,0,0.15); border:1px solid var(--red); color: #ff7744;
-                   animation: glitch-blink 2s step-end infinite; }
+.status-online  { background:rgba(58,122,58,0.2); border:1px solid var(--green); color:var(--green-bright); }
+.status-stable  { background:rgba(212,136,10,0.15); border:1px solid var(--amber); color:var(--amber); }
+.status-glitch  { background:rgba(204,34,0,0.15); border:1px solid var(--red); color:#ff7744;
+                  animation:glitch-blink 2s step-end infinite; }
 @keyframes glitch-blink { 60%{opacity:1;} 62%{opacity:0.2;} 64%{opacity:1;} }
 
-/* Developer block */
+/* Lore block */
+.lore-block {
+  background: rgba(100,0,0,0.06);
+  border: 1px solid rgba(180,30,0,0.2);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex; flex-direction:column; gap:0.85rem;
+  grid-column: 1 / -1;
+  transition: border-color 0.2s;
+}
+.lore-block:hover { border-color: rgba(180,30,0,0.4); }
+.lore-block-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem; letter-spacing: 3px;
+  color: #a04040;
+}
+.lore-block p {
+  font-size: 0.72rem; line-height: 2;
+  color: #888; font-style: italic;
+}
+.lore-block p em { color: #b06060; font-style: normal; }
+
+/* Dev card */
 .dev-card {
   background: rgba(212,136,10,0.04);
   border: 1px solid rgba(212,136,10,0.2);
@@ -492,19 +485,15 @@ body {
   padding: 1.5rem;
   grid-column: 1 / -1;
 }
-.dev-name {
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  letter-spacing: 4px;
-  color: var(--amber);
-  margin-bottom: 0.5rem;
-}
-.dev-desc {
-  font-size: 0.72rem;
-  line-height: 1.8;
-  color: var(--text);
-}
-.dev-desc em { color: var(--text-bright); font-style: normal; }
+.dev-name { font-family:var(--font-display); font-size:1.4rem; letter-spacing:4px; color:var(--amber); margin-bottom:0.5rem; }
+.dev-desc  { font-size:0.72rem; line-height:1.8; color:var(--text); }
+.dev-desc em { color:var(--text-bright); font-style:normal; }
+
+/* ════════════════════════════════════════════════════════════
+   LANG VISIBILITY
+   .lang-en hidden by default; JS switches them.
+════════════════════════════════════════════════════════════ */
+.lang-en { display: none; }
 
 /* ════════════════════════════════════════════════════════════
    FOOTER
@@ -513,81 +502,80 @@ body {
   margin-top: 4rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  font-size: 0.6rem;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-  text-transform: uppercase;
+  display: flex; justify-content:space-between; align-items:center;
+  flex-wrap: wrap; gap: 0.75rem;
+  font-size: 0.6rem; letter-spacing: 2px;
+  color: var(--text-dim); text-transform: uppercase;
 }
 
   </style>
 </head>
 <body>
 
-  <!-- ── Layers ──────────────────────────────────────────────── -->
-  <div class="page-bg">
-    <!--
-      OPTION A (default): CSS background-image set via --bg-img above.
-      OPTION B (video):   Uncomment below and set opacity in .page-bg video rule.
-    -->
-    <!--
-    <video autoplay muted loop playsinline>
-      <source src="assets/videos/info_bg.mp4" type="video/mp4">
-    </video>
-    -->
-  </div>
+  <div class="page-bg"></div>
   <div class="crt-overlay"></div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       PAGE
-  ═══════════════════════════════════════════════════════════ -->
   <main class="page">
 
-    <!-- ── HEADER ─────────────────────────────────────────────── -->
+    <!-- ══ HEADER ═══════════════════════════════════════════════ -->
     <header class="site-header">
       <div class="site-logo">
         <span class="site-logo-title">FNAF // INFO</span>
         <span class="site-logo-sub">internal documentation</span>
       </div>
       <span class="status-pill">● SYSTEM ONLINE</span>
-      <a href="index.html" class="btn-back">
-        <span class="btn-back-arrow">←</span> Back to menu
-      </a>
+
+      <div class="header-right">
+        <!-- ── Language toggle ──────────────────────────────── -->
+        <div class="lang-toggle" id="lang-toggle" role="switch" aria-label="Language toggle">
+          <span class="lang-label lang-label-ru active" id="label-ru">RU</span>
+          <div class="toggle-track" id="toggle-track">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="lang-label lang-label-en" id="label-en">EN</span>
+        </div>
+        <!-- ── Back button ──────────────────────────────────── -->
+        <a href="index.html" class="btn-back">← Back to menu</a>
+      </div>
     </header>
 
-    <!-- ═══════════════════════════════════════════════════════
-         SECTION 1: ANIMATRONIC GUIDE
-    ═══════════════════════════════════════════════════════ -->
+    <!-- ══ SECTION 1: ANIMATRONIC GUIDE ═════════════════════════ -->
     <section class="section" id="guide">
       <div class="section-header">
         <h1 class="section-title">ANIMATRONIC GUIDE</h1>
-        <span class="section-sub">Собранные наблюдения. Not all of them are reliable.</span>
+        <!-- Section sub-title: two language versions -->
+        <span class="section-sub lang-ru">Собранные наблюдения. Не всем из них стоит доверять.</span>
+        <span class="section-sub lang-en">Collected observations. Not all of them are reliable.</span>
       </div>
 
-      <div class="cards-grid" id="cards-container">
-        <!-- Cards are injected by JS from ANIMATRONICS data below -->
+      <!-- RU cards -->
+      <div class="lang-ru">
+        <div class="cards-grid" id="cards-ru"></div>
+      </div>
+      <!-- EN cards -->
+      <div class="lang-en">
+        <div class="cards-grid" id="cards-en"></div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════════════════
-         SECTION 2: ABOUT THE SYSTEM
-    ═══════════════════════════════════════════════════════ -->
+    <!-- ══ SECTION 2: ABOUT ══════════════════════════════════════ -->
     <section class="section" id="about">
       <div class="section-header">
         <h2 class="section-title">ABOUT THE SYSTEM</h2>
-        <span class="section-sub">Фрагмент внутренней документации</span>
+        <span class="section-sub lang-ru">Фрагмент внутренней документации</span>
+        <span class="section-sub lang-en">Internal documentation fragment</span>
       </div>
 
-      <div class="about-grid" id="about-container">
-        <!-- Blocks injected by JS from ABOUT_BLOCKS data below -->
+      <!-- RU about -->
+      <div class="lang-ru">
+        <div class="about-grid" id="about-ru"></div>
+      </div>
+      <!-- EN about -->
+      <div class="lang-en">
+        <div class="about-grid" id="about-en"></div>
       </div>
     </section>
 
-    <!-- ── FOOTER ─────────────────────────────────────────────── -->
     <footer class="site-footer">
       <span>© 2026 mauther · Five Nights at Freddy's Web Demo</span>
       <span>v 1.13 · BUILD STABLE</span>
@@ -597,118 +585,271 @@ body {
 
   <script>
   /* ══════════════════════════════════════════════════════════════
-     DATA — EDIT HERE TO CHANGE CONTENT
-     ══════════════════════════════════════════════════════════════
-
-     ANIMATRONICS — one object per character.
-     Fields:
-       id          — used for image filename: {id}_guide.png
-       name        — display name (shown in all-caps)
-       desc        — italic flavour text (Russian)
-       observed    — array of observed behaviour strings
-       hints       — array of hint strings (no direct instructions!)
-       threat      — 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-     IMAGE PATH: assets/images/ui/{id}_guide.png
-     Change IMAGE_BASE below to point to a different folder.
+     LANGUAGE SYSTEM
   ══════════════════════════════════════════════════════════════ */
-  const IMAGE_BASE = 'assets/images/ui/';
+  let currentLang = localStorage.getItem('lang') || 'ru';
 
-  const ANIMATRONICS = [
+  function setLang(lang) {
+    // Show / hide content blocks — must be explicit, never '' (would inherit CSS display:none)
+    document.querySelectorAll('.lang-ru').forEach(el => {
+      el.style.display = lang === 'ru' ? 'block' : 'none';
+    });
+    document.querySelectorAll('.lang-en').forEach(el => {
+      el.style.display = lang === 'en' ? 'block' : 'none';
+    });
+
+    // Toggle track state
+    const track = document.getElementById('toggle-track');
+    lang === 'en' ? track.classList.add('is-en') : track.classList.remove('is-en');
+
+    // Label active state
+    document.getElementById('label-ru').classList.toggle('active', lang === 'ru');
+    document.getElementById('label-en').classList.toggle('active', lang === 'en');
+
+    localStorage.setItem('lang', lang);
+    currentLang = lang;
+  }
+
+  document.getElementById('lang-toggle').addEventListener('click', () => {
+    setLang(currentLang === 'ru' ? 'en' : 'ru');
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     ANIMATRONICS DATA — RU
+     (переписан: атмосфера, лор, косвенные намёки)
+  ══════════════════════════════════════════════════════════════ */
+  const ANIMATRONICS_RU = [
     {
       id:       'bonnie',
       name:     'Bonnie',
-      desc:     'Он всегда был первым. Выходит раньше остальных — ещё когда ночь только начинается. Никто не знает почему.',
+      desc:     'Он всегда приходил первым. Говорят, дети любили его больше остальных. Он до сих пор это помнит.',
       observed: [
-        'Предпочитает левую часть здания',
-        'Двигается, когда на него не смотрят',
-        'Может долго стоять в одном месте',
+        'По ночам с левой стороны слышны шаги. Иногда — детский смех.',
+        'Его глаза продолжают двигаться, даже когда он стоит неподвижно.',
+        'Однажды охранник оставил записку: «Не смотри ему в глаза».',
       ],
       hints: [
-        'Двери существуют не просто так.',
-        'Лучше не терять его из виду.',
-        'Он уже был там. Возможно, всё ещё стоит.',
+        'Он знает, где ты находишься.',
+        'Левая сторона сегодня ночью неспокойна.',
+        'Некоторые двери закрывают вовсе не ради тепла.',
       ],
       threat: 'HIGH',
     },
     {
       id:       'chica',
       name:     'Chica',
-      desc:     'Она появляется с правой стороны. Тихо. Почти незаметно. Говорят, с кухни иногда слышны странные звуки.',
+      desc:     'Она улыбается. Всегда улыбается. С кухни временами слышны звуки — словно кто-то ищет что-то в темноте.',
       observed: [
-        'Двигается по правому коридору',
-        'Проходит через несколько комнат перед офисом',
-        'Активна, но непредсказуема',
+        'С кухни иногда доносится пение. Детское.',
+        'Её клюв открывается и закрывается сам по себе.',
+        'Проходит через несколько комнат, прежде чем добраться до тебя.',
       ],
       hints: [
-        'Ты услышишь это раньше, чем увидишь.',
-        'Проверяй правую сторону.',
-        'Даже закрытая дверь — не гарантия.',
+        'Ты услышишь её раньше, чем увидишь.',
+        'Правый коридор сегодня неспокоен.',
+        'Иногда лучше не знать, что скрывается за закрытой дверью.',
       ],
       threat: 'HIGH',
     },
     {
       id:       'freddy',
       name:     'Freddy',
-      desc:     'Он ждёт. Медленно, терпеливо — он движется в темноте. Видеокамеры его раздражают. Или нет?',
+      desc:     'Он терпелив. Невероятно терпелив. Дети называли его другом. Говорят, он до сих пор помнит их голоса.',
       observed: [
-        'Почти не двигается, пока за ним наблюдают',
-        'Становится активнее к концу ночи',
-        'Атакует только в темноте',
+        'Почти не движется, пока за ним наблюдают. Почти.',
+        'Ближе к рассвету становится совсем другим.',
+        'Его смех слышен даже через закрытые двери.',
       ],
       hints: [
-        'Он не торопится.',
-        'Свет справа — твой союзник.',
-        'Слушай смех. Это предупреждение.',
+        'Слушай. Он предупреждает тебя. По-своему.',
+        'Темнота — его союзник, не твой.',
+        'Когда слышишь музыку — уже почти слишком поздно.',
       ],
       threat: 'CRITICAL',
     },
     {
       id:       'foxy',
       name:     'Foxy',
-      desc:     'Пиратская бухта закрыта. Занавески задёрнуты. Но иногда, если не смотреть слишком долго...',
+      desc:     'Пиратская бухта давно закрыта. Занавес задёрнут. Но за ним что-то есть. Что-то, что ждёт. И смотрит.',
       observed: [
-        'Появляется только из Pirate Cove',
-        'Накапливает готовность со временем',
-        'Бежит по левому коридору',
+        'Не выходит, пока за ним наблюдают. Не выходит.',
+        'Иногда за занавесом мелькает тень.',
+        'Говорят, раньше он рассказывал детям истории. Они до сих пор здесь.',
       ],
       hints: [
-        'Не забывай о нём — он помнит о тебе.',
-        'Заглядывай туда. Просто заглядывай.',
-        'Закрытая дверь его остановит. Один раз.',
+        'Забыть о нём — ошибка.',
+        'Загляни туда. Просто загляни. Ненадолго.',
+        'Если он уже бежит — ты это услышишь.',
       ],
       threat: 'MEDIUM',
     },
   ];
 
   /* ══════════════════════════════════════════════════════════════
-     ABOUT BLOCKS — edit text, add/remove blocks freely.
-     Each block: { type, title, content }
-     Types: 'text' | 'arch' | 'devnotes' | 'status' | 'developer'
+     ANIMATRONICS DATA — EN
   ══════════════════════════════════════════════════════════════ */
-  const ABOUT_BLOCKS = [
+  const ANIMATRONICS_EN = [
     {
-      type:  'text',
-      title: 'ОБ ИГРЕ',
-      content: `
-        Это браузерный прототип Five Nights at Freddy's — хоррор-игры
-        от Scott Cawthon. Ты играешь за ночного охранника пиццерии Freddy Fazbear's Pizza.
-        Твоя задача — пережить 5 ночей, наблюдая за аниматрониками через камеры
-        и управляя дверьми и освещением.<br><br>
-        Игра работает полностью в браузере. Никаких загрузок.
-        Никаких дополнительных плагинов. Только ты и темнота.
-      `,
+      id:       'bonnie',
+      name:     'Bonnie',
+      desc:     'He always came first. They say the children loved him most of all. He still remembers that.',
+      observed: [
+        'At night, footsteps echo from the left side. Sometimes — children\'s laughter.',
+        'His eyes keep moving even when he stands perfectly still.',
+        'A guard once left a note: "Don\'t look him in the eyes."',
+      ],
+      hints: [
+        'He knows where you are.',
+        'The left side is restless tonight.',
+        'Some doors are closed for reasons that have nothing to do with warmth.',
+      ],
+      threat: 'HIGH',
+    },
+    {
+      id:       'chica',
+      name:     'Chica',
+      desc:     'She smiles. Always smiles. Sounds drift out of the kitchen sometimes — as if something is searching for something in the dark.',
+      observed: [
+        'Singing drifts out of the kitchen. A child\'s voice.',
+        'Her beak opens and closes on its own.',
+        'She passes through several rooms before reaching you.',
+      ],
+      hints: [
+        'You\'ll hear her before you see her.',
+        'The right corridor is uneasy tonight.',
+        'Sometimes it\'s better not to know what hides behind a closed door.',
+      ],
+      threat: 'HIGH',
+    },
+    {
+      id:       'freddy',
+      name:     'Freddy',
+      desc:     'He is patient. Incredibly patient. The children called him their friend. They say he still remembers their voices.',
+      observed: [
+        'Barely moves while being watched. Barely.',
+        'Closer to dawn, he becomes something else entirely.',
+        'His laugh can be heard even through closed doors.',
+      ],
+      hints: [
+        'Listen. He warns you. In his own way.',
+        'Darkness is his ally, not yours.',
+        'When you hear the music — it\'s almost already too late.',
+      ],
+      threat: 'CRITICAL',
+    },
+    {
+      id:       'foxy',
+      name:     'Foxy',
+      desc:     'Pirate Cove has been closed for a long time. The curtain is drawn. But something is behind it. Something that waits. And watches.',
+      observed: [
+        'Doesn\'t come out while being watched. Doesn\'t.',
+        'Sometimes a shadow flickers behind the curtain.',
+        'They say he used to tell stories to the children. They\'re still here.',
+      ],
+      hints: [
+        'Forgetting about him is a mistake.',
+        'Look in there. Just look. Briefly.',
+        'If he\'s already running — you\'ll hear it.',
+      ],
+      threat: 'MEDIUM',
+    },
+  ];
+
+  /* ══════════════════════════════════════════════════════════════
+     ABOUT BLOCKS — RU
+  ══════════════════════════════════════════════════════════════ */
+  const ABOUT_BLOCKS_RU = [
+    {
+      type:    'text',
+      title:   'ОБ ИГРЕ',
+      content: `Freddy Fazbear's Pizza. Место, где дети смеются, а аниматроники поют. Днём.<br><br>
+                Ночью всё иначе. Ты — ночной охранник. Смена с 12 ночи до 6 утра.
+                Камеры показывают коридоры. Двери дают ощущение защиты. Энергия — нет.<br><br>
+                Справишься — получишь зарплату.
+                Не справишься — никто не узнает, что именно здесь произошло.`,
+    },
+    {
+      type:  'arch',
+      title: 'АРХИТЕКТУРА СИСТЕМЫ',
+      items: [
+        { key: 'Scene System',   val: 'Одно изображение = одно состояние. Никаких слоёв аниматроников — только готовые сцены.' },
+        { key: 'Animatronic AI', val: 'Взвешенный граф переходов. У каждого своя логика движения и атаки.' },
+        { key: 'Camera System',  val: 'Отдельный UI-модуль. Планшет с CCTV-эффектами, мини-картой и переключением камер.' },
+        { key: 'Door System',    val: 'Video overlay для анимации. Двери — отдельный слой, не часть сцены.' },
+        { key: 'Power System',   val: 'Постоянный расход энергии. При 0% — Фредди входит в офис. Toreador March.' },
+      ],
+    },
+    {
+      type:  'lore',
+      title: 'АРХИВНЫЕ ЗАПИСИ',
+      content: `В <em>1987 году</em> произошло несколько инцидентов, которые так и не получили официального объяснения.<br><br>
+                Записи с камер исчезли. Жалобы посетителей были утеряны.<br><br>
+                Сотрудники сообщали, что слышали голоса внутри аниматроников.
+                Не синтезированные. Настоящие. <em>Детские</em>.<br><br>
+                Пиццерия продолжает работать. Ночные охранники продолжают меняться.`,
+    },
+    {
+      type:  'devnotes',
+      title: 'ЗАМЕТКИ РАЗРАБОТЧИКА',
+      notes: [
+        'Система камер оказалась сложнее, чем ожидалось — несколько переработок.',
+        'ИИ всё ещё непредсказуем в граничных случаях. Так и задумано.',
+        'Фокси потребовал отдельного модуля логики.',
+        'Бесшовный аудио-луп = Web Audio API. Стандартный давал паузу.',
+        'Логика движения переписывалась несколько раз.',
+        'Video overlay для дверей — самая сложная часть проекта.',
+      ],
+    },
+    {
+      type:  'status',
+      title: 'СТАТУС СИСТЕМЫ',
+      items: [
+        { label: 'ONLINE',    cls: 'status-online' },
+        { label: 'STABLE',    cls: 'status-stable' },
+        { label: 'GLITCHING', cls: 'status-glitch' },
+      ],
+    },
+    {
+      type: 'developer',
+      name: 'YOUR NAME HERE',
+      desc: `Создано: <em>YOUR NAME HERE</em>.<br>
+             Браузерная демо-версия создана как учебный проект.<br>
+             Система всё ещё дорабатывается.`,
+    },
+  ];
+
+  /* ══════════════════════════════════════════════════════════════
+     ABOUT BLOCKS — EN
+  ══════════════════════════════════════════════════════════════ */
+  const ABOUT_BLOCKS_EN = [
+    {
+      type:    'text',
+      title:   'ABOUT THE GAME',
+      content: `Freddy Fazbear's Pizza. A place where children laugh and animatronics sing. During the day.<br><br>
+                At night, everything changes. You are the night security guard. Shift runs from midnight to 6 AM.
+                Cameras show the corridors. Doors give a sense of safety. Power does not.<br><br>
+                Survive — you get your paycheck.
+                Don't — and no one will know what exactly happened here.`,
     },
     {
       type:  'arch',
       title: 'SYSTEM ARCHITECTURE',
       items: [
-        { key: 'Scene System',      val: 'Одно изображение = одно состояние. Никаких слоёв аниматроников — только готовые сцены.' },
-        { key: 'Animatronic AI',    val: 'Взвешенный граф переходов. Каждый аниматроник имеет уникальную логику движения и атаки.' },
-        { key: 'Camera System',     val: 'Отдельный UI-модуль. Планшет с CCTV-эффектами, мини-картой и переключением камер.' },
-        { key: 'Door System',       val: 'Video overlay для анимации. Двери — отдельный слой, не часть сцены.' },
-        { key: 'Power System',      val: 'Постоянный расход энергии. При 0% — Freddy входит в офис. Toreador March.' },
+        { key: 'Scene System',   val: 'One image = one state. No animatronic layers — only pre-rendered scenes.' },
+        { key: 'Animatronic AI', val: 'Weighted transition graph. Each animatronic has its own movement and attack logic.' },
+        { key: 'Camera System',  val: 'Separate UI module. Tablet with CCTV effects, minimap, and camera switching.' },
+        { key: 'Door System',    val: 'Video overlay for animation. Doors are a separate layer, not part of the scene.' },
+        { key: 'Power System',   val: 'Constant power drain. At 0% — Freddy enters the office. Toreador March.' },
       ],
+    },
+    {
+      type:  'lore',
+      title: 'ARCHIVED RECORDS',
+      content: `In <em>1987</em>, several incidents occurred that never received an official explanation.<br><br>
+                Security footage disappeared. Customer complaints were lost.<br><br>
+                Staff reported hearing voices inside the animatronics.
+                Not synthesized. Real. <em>Children's voices</em>.<br><br>
+                The pizzeria continues to operate. Night guards continue to rotate.`,
     },
     {
       type:  'devnotes',
@@ -723,96 +864,75 @@ body {
       ],
     },
     {
-      type:   'status',
-      title:  'SYSTEM STATUS',
-      items:  [
-        { label: 'ONLINE',   cls: 'status-online' },
-        { label: 'STABLE',   cls: 'status-stable' },
-        { label: 'GLITCHING',cls: 'status-glitch' },
+      type:  'status',
+      title: 'SYSTEM STATUS',
+      items: [
+        { label: 'ONLINE',    cls: 'status-online' },
+        { label: 'STABLE',    cls: 'status-stable' },
+        { label: 'GLITCHING', cls: 'status-glitch' },
       ],
     },
     {
-      type:    'developer',
-      // ── EDIT: replace with your name and description ──────────
-      name:    'YOUR NAME HERE',
-      desc:    `Created by <em>YOUR NAME HERE</em>.<br>
-                Браузерная демо-версия создана как учебный проект.<br>
-                Система всё ещё дорабатывается.`,
+      type: 'developer',
+      name: 'YOUR NAME HERE',
+      desc: `Created by <em>YOUR NAME HERE</em>.<br>
+             Browser demo built as a learning project.<br>
+             The system is still being refined.`,
     },
   ];
 
   /* ══════════════════════════════════════════════════════════════
-     RENDER ANIMATRONIC CARDS
+     RENDER — cards
   ══════════════════════════════════════════════════════════════ */
-  function renderCards() {
-    const container = document.getElementById('cards-container');
-    if (!container) return;
+  const IMAGE_BASE = 'assets/images/ui/';
 
-    ANIMATRONICS.forEach((char, i) => {
+  function renderCards(containerId, data) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    data.forEach((char, i) => {
       const card = document.createElement('div');
       card.className = 'card';
-      card.style.animationDelay = `${i * 0.1}s`;
       card.style.animation = `fade-up 0.6s ease ${i * 0.1}s both`;
-
       const imgSrc = `${IMAGE_BASE}${char.id}_guide.png`;
-
       card.innerHTML = `
         <div class="card-img-wrap">
-          <img class="card-img"
-               src="${imgSrc}"
-               alt="${char.name}"
-               loading="lazy"
+          <img class="card-img" src="${imgSrc}" alt="${char.name}" loading="lazy"
                onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-          <div class="card-img-placeholder" style="display:none">
-            IMAGE UNAVAILABLE
-          </div>
+          <div class="card-img-placeholder" style="display:none">IMAGE UNAVAILABLE</div>
         </div>
-
         <div class="card-body">
           <div class="card-name">${char.name.toUpperCase()}</div>
-
           <p class="card-desc">${char.desc}</p>
-
           <div>
             <div class="card-label">OBSERVED BEHAVIOR</div>
-            <ul class="obs-list">
-              ${char.observed.map(o => `<li>${o}</li>`).join('')}
-            </ul>
+            <ul class="obs-list">${char.observed.map(o => `<li>${o}</li>`).join('')}</ul>
           </div>
-
           <div>
             <div class="card-label">HINTS</div>
-            <ul class="hints-list">
-              ${char.hints.map(h => `<li>${h}</li>`).join('')}
-            </ul>
+            <ul class="hints-list">${char.hints.map(h => `<li>${h}</li>`).join('')}</ul>
           </div>
-
           <div>
             <div class="card-label">THREAT LEVEL</div>
             <span class="threat-badge threat-${char.threat}">${char.threat}</span>
           </div>
-        </div>
-      `;
-
+        </div>`;
       container.appendChild(card);
     });
   }
 
   /* ══════════════════════════════════════════════════════════════
-     RENDER ABOUT BLOCKS
+     RENDER — about blocks
   ══════════════════════════════════════════════════════════════ */
-  function renderAbout() {
-    const container = document.getElementById('about-container');
+  function renderAbout(containerId, blocks) {
+    const container = document.getElementById(containerId);
     if (!container) return;
-
-    ABOUT_BLOCKS.forEach(block => {
+    blocks.forEach(block => {
       if (block.type === 'text') {
         container.innerHTML += `
           <div class="info-block">
             <div class="info-block-title">${block.title}</div>
             <p>${block.content}</p>
           </div>`;
-
       } else if (block.type === 'arch') {
         container.innerHTML += `
           <div class="info-block">
@@ -825,7 +945,12 @@ body {
                 </li>`).join('')}
             </ul>
           </div>`;
-
+      } else if (block.type === 'lore') {
+        container.innerHTML += `
+          <div class="lore-block">
+            <div class="lore-block-title">${block.title}</div>
+            <p>${block.content}</p>
+          </div>`;
       } else if (block.type === 'devnotes') {
         container.innerHTML += `
           <div class="info-block">
@@ -834,7 +959,6 @@ body {
               ${block.notes.map(n => `<li>${n}</li>`).join('')}
             </ul>
           </div>`;
-
       } else if (block.type === 'status') {
         container.innerHTML += `
           <div class="info-block">
@@ -843,7 +967,6 @@ body {
               ${block.items.map(s => `<span class="status-item ${s.cls}">${s.label}</span>`).join('')}
             </div>
           </div>`;
-
       } else if (block.type === 'developer') {
         container.innerHTML += `
           <div class="dev-card">
@@ -858,8 +981,13 @@ body {
      INIT
   ══════════════════════════════════════════════════════════════ */
   document.addEventListener('DOMContentLoaded', () => {
-    renderCards();
-    renderAbout();
+    renderCards('cards-ru', ANIMATRONICS_RU);
+    renderCards('cards-en', ANIMATRONICS_EN);
+    renderAbout('about-ru', ABOUT_BLOCKS_RU);
+    renderAbout('about-en', ABOUT_BLOCKS_EN);
+
+    // Apply saved language (after content is rendered)
+    setLang(currentLang);
   });
   </script>
 </body>

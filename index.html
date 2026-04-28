@@ -5,6 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Five Nights at Freddy's</title>
   <link rel="stylesheet" href="css/menu.css">
+  <style>
+    /*
+      "How to Survive" inherits all .nav-btn base styles from menu.css
+      (flex, font, size, weight, letter-spacing, padding, uppercase, cursor).
+      We only override colour and add flicker.
+      #btn-info:hover has higher specificity than .nav-btn:hover so
+      it correctly stays amber instead of going white.
+    */
+    #btn-info {
+      color: #9a8540;
+      animation: info-flicker 3s infinite;
+    }
+    #btn-info:hover {
+      color: #bfa458;
+      text-shadow: 0 0 10px rgba(180,155,70,0.18);
+      animation-play-state: paused;   /* stops flickering on hover */
+    }
+
+    /*
+      Quiet for the first 81% of the cycle (~2.4 s), then two rapid
+      dips over ~0.18 s — like a faulty lamp briefly losing contact.
+      Flickers roughly once every 3 s; well within the 1–3 s target.
+    */
+    @keyframes info-flicker {
+      0%,  81%,  100% { opacity: 1;    }
+      83%             { opacity: 0.12; }
+      84%             { opacity: 0.85; }
+      85%             { opacity: 0.3;  }
+      86%             { opacity: 1;    }
+      88%             { opacity: 0.55; }
+      89%             { opacity: 1;    }
+    }
+  </style>
 </head>
 <body>
 
@@ -50,6 +83,13 @@
       <button class="nav-btn" id="btn-continue" disabled>
         <span class="nav-arrow nav-arrow-off">&gt;&gt;</span> Continue
       </button>
+      <!--
+        Same .nav-btn class → same font, size, padding, flex layout, left-align.
+        #btn-info styles above override only colour + animation.
+      -->
+      <button class="nav-btn" id="btn-info">
+        <span class="nav-arrow">&gt;&gt;</span> How to Survive
+      </button>
     </nav>
   </div>
 
@@ -83,20 +123,14 @@
     const menuFooter   = document.getElementById('menu-footer');
     const bgVideo      = document.getElementById('menu-bg-video');
 
-    // ── Check if user already confirmed this session ──────────
-    // sessionStorage persists for the browser tab lifetime only.
-    // So returning from game.html → index.html in the same tab
-    // skips the modal.  A fresh tab / new window shows it again.
     const alreadyConfirmed = sessionStorage.getItem('fnaf_warned') === '1';
 
     if (alreadyConfirmed) {
-      // Skip modal — show menu immediately and start media
       warningModal.style.display = 'none';
       showMenu();
       startBgVideo();
       startMenuMusic();
     } else {
-      // Show modal — wait for click
       warningBtn.addEventListener('click', function () {
         sessionStorage.setItem('fnaf_warned', '1');
         warningModal.style.display = 'none';
@@ -106,7 +140,6 @@
       });
     }
 
-    // ── Show menu elements ────────────────────────────────────
     function showMenu() {
       menuWrap.style.display   = 'flex';
       menuFooter.style.display = 'flex';
@@ -119,12 +152,10 @@
       setupButtons();
     }
 
-    // ── Background video ──────────────────────────────────────
     function startBgVideo() {
       if (bgVideo) bgVideo.play().catch(() => {});
     }
 
-    // ── Music ─────────────────────────────────────────────────
     let menuAudio = null;
 
     function startMenuMusic() {
@@ -138,14 +169,18 @@
       if (menuAudio) { menuAudio.pause(); menuAudio.src = ''; menuAudio = null; }
     }
 
-    // ── Button logic ──────────────────────────────────────────
     function setupButtons() {
       const btnNew  = document.getElementById('btn-new-game');
       const btnCont = document.getElementById('btn-continue');
+      const btnInfo = document.getElementById('btn-info');
       let activeBtn = btnNew;
 
       function setActive(btn) {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        // Only New Game / Continue take part in keyboard navigation.
+        // btn-info is intentionally excluded — it has its own amber style
+        // and should not be turned white by .nav-btn.active.
+        document.querySelectorAll('#btn-new-game, #btn-continue')
+          .forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeBtn = btn;
       }
@@ -153,11 +188,21 @@
       btnNew.addEventListener('mouseenter',  () => setActive(btnNew));
       btnCont.addEventListener('mouseenter', () => { if (!btnCont.disabled) setActive(btnCont); });
 
-      btnNew.addEventListener('click',  () => { stopMenuMusic(); startGame(1, true);  });
+      btnNew.addEventListener('click',  () => { stopMenuMusic(); startGame(1, true); });
       btnCont.addEventListener('click', () => {
         if (btnCont.disabled) return;
         stopMenuMusic();
         startGame(Math.min(highestNight + 1, 5), false);
+      });
+
+      // fnaf_warned is already '1' here (user passed the modal to reach the menu).
+      // Navigating to info.html and back will skip the modal automatically.
+      btnInfo.addEventListener('click', () => {
+        stopMenuMusic();
+        // Сбрасываем флаг — при возврате с info.html модалка
+        // появится снова и даст браузеру разрешение на аудио/видео.
+        sessionStorage.removeItem('fnaf_warned');
+        window.location.href = 'info.html';
       });
 
       window.addEventListener('keydown', (e) => {
@@ -170,7 +215,6 @@
       });
     }
 
-    // ── Start game ────────────────────────────────────────────
     function startGame(night, showIntro) {
       if (showIntro && night === 1) playIntroThenGo(night);
       else goToGame(night);
