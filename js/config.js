@@ -125,7 +125,7 @@ const CONFIG = {
   ATTACK_ROLL_MAX: 20,
 
   AI_LEVELS: {
-    1: { freddy: 0,  bonnie: 0,  chica: 0,  foxy: 1  },
+    1: { freddy: 0,  bonnie: 1,  chica: 1,  foxy: 1  },
     2: { freddy: 0,  bonnie: 3,  chica: 1,  foxy: 2  },
     3: { freddy: 1,  bonnie: 7,  chica: 5,  foxy: 6  },
     4: { freddy: 2,  bonnie: 12, chica: 10, foxy: 15 },
