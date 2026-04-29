@@ -46,15 +46,54 @@ class FanSystem {
     }
 
     // Fan hitbox
-    if (this._fanBtn) {
-      ['mousedown', 'touchstart'].forEach(evt =>
-        this._fanBtn.addEventListener(evt, e => e.stopPropagation(), { passive: true })
-      );
-      this._fanBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        this._toggleFan();
-      });
-    }
+// Fan hitbox (исправленный)
+if (this._fanBtn) {
+    // Используем свойства объекта, чтобы избежать ошибок объявления переменных
+    this._fanTouchData = {
+        startY: 0,
+        startX: 0,
+        isMoving: false
+    };
+
+    this._fanBtn.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        this._fanTouchData.startY = t.clientY;
+        this._fanTouchData.startX = t.clientX;
+        this._fanTouchData.isMoving = false;
+        // НЕ прерываем событие, чтобы основной свайп камер его поймал
+    }, { passive: true });
+
+    this._fanBtn.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        const dy = Math.abs(t.clientY - this._fanTouchData.startY);
+        const dx = Math.abs(t.clientX - this._fanTouchData.startX);
+
+        // Если сдвиг больше 15 пикселей — это точно свайп, отключаем вентилятор
+        if (dy > 15 || dx > 15) {
+            this._fanTouchData.isMoving = true;
+        }
+    }, { passive: true });
+
+    this._fanBtn.addEventListener('touchend', (e) => {
+        // Если движения не было (чистый тап) — переключаем вентилятор
+        if (!this._fanTouchData.isMoving) {
+            // Проверяем, существует ли метод, чтобы не поймать TypeError
+            if (typeof this._toggleFan === 'function') {
+                this._toggleFan();
+            }
+            // Предотвращаем клик-фантом, но только если это не был свайп
+            if (e.cancelable) e.preventDefault();
+        }
+    }, { passive: false });
+
+    // Обработка для мышки (ПК), чтобы не сломать клик на десктопе
+    this._fanBtn.addEventListener('click', (e) => {
+        // e.detail === 0 обычно означает эмуляцию тача, пропускаем её
+        if (e.detail !== 0) {
+            this._toggleFan();
+        }
+    });
+}
 
     // Nose hitbox
     if (this._noseBtn) {
@@ -120,7 +159,7 @@ class FanSystem {
     if (this._actx.state === 'suspended') this._actx.resume().catch(() => {});
 
     this._ambGain = this._actx.createGain();
-    this._ambGain.gain.value = 0.28;   // quiet background hum
+    this._ambGain.gain.value = 0.10;   // quiet background hum
     this._ambGain.connect(this._actx.destination);
 
     this._ambNode = this._actx.createBufferSource();

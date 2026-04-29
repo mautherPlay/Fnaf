@@ -35,7 +35,6 @@ class SoundSystem {
       'camera_static',
       'door_close',
       'door_open',
-      'light_buzz',
       'light_hum',         // NEW: continuous hum while light held
       'blind_spot_hit',    // NEW: animatronic visible under light
       'error_buzz',        // NEW: door/light disabled (no power)
@@ -50,7 +49,6 @@ class SoundSystem {
       'phone_guy_night2',
       'phone_guy_night3',
       'phone_guy_night4',  // NEW
-      'blip',
     ];
 
     this._unlockBound = this._unlock.bind(this);

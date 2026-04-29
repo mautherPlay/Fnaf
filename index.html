@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Five Nights at Freddy's</title>
   <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/game.css"> <style></style>
   <style>
     /*
       "How to Survive" inherits all .nav-btn base styles from menu.css
@@ -37,10 +38,36 @@
       88%             { opacity: 0.55; }
       89%             { opacity: 1;    }
     }
+  
+    #rotate-prompt {
+      display: none; position: fixed; inset: 0; background: #000;
+      flex-direction: column; align-items: center; justify-content: center;
+      z-index: 99999; color: #aaa; text-align: center; gap: 16px;
+      font-family: 'Courier New', monospace;
+    }
+    .rotate-icon { 
+      font-size: 52px; 
+      animation: rotate-hint 2s infinite ease-in-out; 
+    }
+    @keyframes rotate-hint {
+      0% { transform: rotate(0deg); }
+      50% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+    @media (orientation: portrait) and (max-width: 900px) {
+      #rotate-prompt { display: flex; }
+    }
+
   </style>
 </head>
 <body>
-
+  <div id="rotate-prompt">
+    <div class="rotate-icon">📱</div>
+    <p>
+        <strong>ROTATE DEVICE — ПОВЕРНИТЕ УСТРОЙСТВО</strong><br>
+        <span class="rotate-small">Landscape mode required / Нужен альбомный режим</span>
+    </p>
+</div>
   <div class="background" id="menu-bg">
     <video id="menu-bg-video" muted loop playsinline preload="auto">
       <source src="assets/videos/menu_bg.mp4" type="video/mp4">
@@ -53,19 +80,27 @@
     <div id="warning-box">
       <div id="warning-header">
         <span id="warning-icon">⚠</span>
-        <span id="warning-title">VIEWER DISCRETION ADVISED</span>
+        <span id="warning-title">WARNING — ВНИМАНИЕ</span>
       </div>
       <div id="warning-body">
-        <p>This game contains <strong>sudden loud sounds</strong>,<br>
-           <strong>flashing images</strong>, and <strong>horror content</strong>.</p>
-        <p>It may cause distress in sensitive individuals.</p>
-        <p class="warning-small">Not recommended for those with anxiety disorders,<br>
-           a history of PTSD, or who are easily startled.</p>
+        <p>
+          <strong>Loud sounds & Flashing images</strong><br>
+          <strong>Громкие звуки и вспышки света</strong>
+        </p>
+        
+        <p>Horror content. May cause distress.<br>
+           Хоррор. Может вызвать стресс.</p>
+
+        <p class="warning-small">
+          Watch out for jumpscares! / Остерегайтесь скримеров!
+        </p>
       </div>
-      <button id="warning-btn">I UNDERSTAND — ENTER</button>
-      <p id="warning-sub">Five Nights at Freddy's — Web Demo</p>
+      
+      <button id="warning-btn">ACCEPT & ENTER — ПРИНЯТЬ</button>
+      
+      <p id="warning-sub">Fazbear Entertainment — Web Demo</p>
     </div>
-  </div>
+</div>
 
   <!-- ── Main menu ─────────────────────────────────────────── -->
   <div class="menu-wrap" id="menu-wrap" style="display:none">
@@ -109,6 +144,18 @@
   <script src="js/EventBus.js"></script>
   <script src="js/SaveSystem.js"></script>
   <script>
+    let menuAudio = null;
+
+    function startMenuMusic() {
+      menuAudio = new Audio('assets/sounds/menu_music.mp3');
+      menuAudio.loop   = true;
+      menuAudio.volume = 0.6;
+      menuAudio.play().catch(() => {});
+    }
+
+    function stopMenuMusic() {
+      if (menuAudio) { menuAudio.pause(); menuAudio.src = ''; menuAudio = null; }
+    }
   (function () {
     'use strict';
 
@@ -156,18 +203,7 @@
       if (bgVideo) bgVideo.play().catch(() => {});
     }
 
-    let menuAudio = null;
-
-    function startMenuMusic() {
-      menuAudio = new Audio('assets/sounds/menu_music.mp3');
-      menuAudio.loop   = true;
-      menuAudio.volume = 0.6;
-      menuAudio.play().catch(() => {});
-    }
-
-    function stopMenuMusic() {
-      if (menuAudio) { menuAudio.pause(); menuAudio.src = ''; menuAudio = null; }
-    }
+   
 
     function setupButtons() {
       const btnNew  = document.getElementById('btn-new-game');

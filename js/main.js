@@ -135,3 +135,101 @@ document.addEventListener('DOMContentLoaded', () => {
   _lastTs = performance.now();
   requestAnimationFrame(gameLoop);
 });
+function alignGame() {
+    const container = document.getElementById('game-container');
+    if (!container) return;
+
+    const gameW = 1200;
+    const gameH = 540;
+    const windowW = window.innerWidth;
+    const windowH = window.innerHeight;
+
+    // 1. Вычисляем масштаб
+    const scale = Math.min(windowW / gameW, windowH / gameH);
+
+    // 2. Вычисляем координаты для центрирования
+    const left = (windowW - (gameW * scale)) / 2;
+    const top = (windowH - (gameH * scale)) / 2;
+
+    // 3. Применяем всё сразу
+    // scale(scale) — увеличит/уменьшит игру
+    // translate — подвинет её в центр экрана
+    // Мы делим left/top на scale, потому что трансформация координат 
+    // происходит внутри масштабированного пространства
+    container.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
+}
+
+// Запуск при изменениях
+// 1. Привязываем события к функции updateScale
+window.addEventListener('resize', updateScale);
+window.addEventListener('load', updateScale);
+window.onorientationchange = updateScale;
+
+// 2. Вызываем её СРАЗУ при загрузке скрипта
+updateScale();
+
+// 3. Сама функция (название должно совпадать с тем, что выше)
+function updateScale() {
+    const game = document.getElementById('game-container');
+    if (!game) return;
+
+    const baseWidth = 1200;
+    const baseHeight = 540;
+
+    const scale = Math.min(
+        window.innerWidth / baseWidth,
+        window.innerHeight / baseHeight
+    );
+
+    game.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+
+// Запуск при изменениях
+
+window.addEventListener('resize', alignGame);
+
+window.addEventListener('load', alignGame);
+
+// Для мобилок — на смену ориентации
+
+window.onorientationchange = alignGame;
+
+
+
+alignGame();
+
+resizeGame();
+
+function updateScale() {
+
+    const game = document.getElementById('game-container');
+
+    if (!game) return;
+
+
+
+    const baseWidth = 1200;
+
+    const baseHeight = 540;
+
+
+
+    // Считаем масштаб исходя из размеров окна браузера
+
+    const scale = Math.min(
+
+        window.innerWidth / baseWidth,
+
+        window.innerHeight / baseHeight
+
+    );
+
+
+
+    // Применяем центрирование и масштаб одновременно
+
+    // translate(-50%, -50%) работает вместе с CSS top:50%; left:50%
+
+    game.style.transform = `translate(-50%, -50%) scale(${scale})`;
+
+}

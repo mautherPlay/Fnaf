@@ -23,6 +23,7 @@ class GameState {
 
     this.panTarget  = 0.5;
     this.panCurrent = 0.5;
+    this.panSpeed   = 0; // Добавляем: текущая скорость поворота
 
     this.animatronics = {
       freddy: this._makeAnim('STAGE', false),

@@ -49,19 +49,49 @@ class UIManager {
     if (nameEl && def) nameEl.textContent = def.name.toUpperCase();
   }
 
-  // ── Minimap active highlight ──────────────────────────────────
+// ── Minimap active highlight ──────────────────────────────────
   _highlightMapNode(camId) {
     document.querySelectorAll('.map-node').forEach(g => {
-      g.classList.toggle('map-active', g.dataset.cam === camId);
+      // Проверяем, что camId совпадает с data-cam
+      if (g.dataset.cam === camId) {
+        g.classList.add('map-active');
+      } else {
+        g.classList.remove('map-active');
+      }
     });
   }
 
   // Make minimap nodes clickable
   _buildMinimapListeners() {
     document.querySelectorAll('.map-node').forEach(g => {
-      g.addEventListener('click', () => {
-        const id = g.dataset.cam;
-        if (id && this.state.cameraOpen) this.camera.switchTo(id);
+      const id = g.dataset.cam;
+      if (!id) return;
+
+      // Создаем одну функцию для обработки нажатия
+      const handlePress = (e) => {
+        // Если планшет закрыт — ничего не делаем
+        if (!this.state.cameraOpen) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log("Нажата камера:", id);
+
+        // ПРОВЕРКА: вызываем метод switchTo
+        if (this.camera && typeof this.camera.switchTo === 'function') {
+          this.camera.switchTo(id);
+        } else {
+          console.error("Ошибка: this.camera или switchTo не найден!");
+        }
+      };
+
+      // Слушаем тач для телефонов
+      g.addEventListener('touchstart', handlePress, { passive: false });
+      
+      // Слушаем клик для ПК
+      g.addEventListener('click', (e) => {
+        // detail === 0 бывает при эмуляции тача, тогда игнорируем, чтобы не нажать дважды
+        if (e.detail !== 0) handlePress(e);
       });
     });
   }
@@ -119,19 +149,70 @@ class UIManager {
   }
 
   // ── Game Over ────────────────────────────────────────────────
-  showGameOver(who) {
+showGameOver(who) {
     const overlay = document.getElementById('gameover-overlay');
     const hud     = document.getElementById('hud');
-    const ot      = document.getElementById('office-trigger-zone');
-    const ct      = document.getElementById('cam-trigger-zone');
+    // Внутри метода showGameOver(who)
+const helpBtn = document.getElementById('btn-how-to');
 
-    if (overlay) overlay.style.display = 'block';
-    if (hud)     hud.style.display     = 'none';
-    if (ot)      ot.style.display      = 'none';
-    if (ct)      ct.style.display      = 'none';
+if (helpBtn) {
+    const handleHelp = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Сохраняем флаг, как ты и хотел
+        sessionStorage.setItem('fnaf_warned', '1');
+        
+        // Останавливаем музыку и уходим на страницу помощи
+        this._stopGoMusic();
+        window.location.href = 'info.html';
+    };
+
+    // Привязываем тач и клик
+    helpBtn.addEventListener('touchstart', handleHelp, { passive: false });
+    helpBtn.addEventListener('click', handleHelp);
+}
+    // Скрываем лишнее
+    if (hud) hud.style.display = 'none';
+    document.getElementById('office-trigger-zone')?.style.setProperty('display', 'none');
+    document.getElementById('cam-trigger-zone')?.style.setProperty('display', 'none');
+
+    if (overlay) {
+        overlay.style.display = 'flex';
+        
+        // ФИКС КНОПОК: Перепривязываем события прямо здесь
+        const retryBtn = document.getElementById('btn-retry');
+        const menuBtn = document.getElementById('btn-menu-go');
+
+        const bindButton = (btn, callback) => {
+            if (!btn) return;
+            // Очищаем старые слушатели (чтобы не дублировались)
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+
+            const handler = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                callback();
+            };
+
+            newBtn.addEventListener('touchstart', handler, { passive: false });
+            newBtn.addEventListener('click', handler);
+        };
+
+        bindButton(retryBtn, () => {
+            this._stopGoMusic();
+            EventBus.emit('retryNight');
+        });
+
+        bindButton(menuBtn, () => {
+            this._stopGoMusic();
+            window.location.href = 'index.html';
+        });
+    }
 
     this._playGoMusic();
-  }
+}
 
   _playGoMusic() {
     this._stopGoMusic();
@@ -177,14 +258,30 @@ class UIManager {
   // ── Overlay buttons ──────────────────────────────────────────
   _bindOverlayButtons() {
     const $ = id => document.getElementById(id);
-    const retry   = $('btn-retry');
-    const menuGo  = $('btn-menu-go');
-    const next    = $('btn-next-night');
-    const winMenu = $('btn-win-menu');
+    const buttons = [
+      { el: $('btn-retry'),     action: () => { this._stopGoMusic(); EventBus.emit('retryNight'); } },
+      { el: $('btn-menu-go'),   action: () => { this._stopGoMusic(); window.location.href = 'index.html'; } },
+      { el: $('btn-next-night'), action: () => EventBus.emit('nextNight') },
+      { el: $('btn-win-menu'),  action: () => { window.location.href = 'index.html'; } }
+    ];
 
-    if (retry)   retry.addEventListener('click',   () => { this._stopGoMusic(); EventBus.emit('retryNight'); });
-    if (menuGo)  menuGo.addEventListener('click',  () => { this._stopGoMusic(); window.location.href = 'index.html'; });
-    if (next)    next.addEventListener('click',    () => EventBus.emit('nextNight'));
-    if (winMenu) winMenu.addEventListener('click', () => { window.location.href = 'index.html'; });
+    buttons.forEach(btn => {
+      if (!btn.el) return;
+
+      const handlePress = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        btn.action();
+      };
+
+      // Быстрое касание для мобилок
+      btn.el.addEventListener('touchstart', handlePress, { passive: false });
+      
+      // Обычный клик для ПК
+      btn.el.addEventListener('click', (e) => {
+        // Проверка e.detail предотвращает повторный вызов после touchstart
+        if (e.detail !== 0) handlePress(e);
+      });
+    });
   }
 }

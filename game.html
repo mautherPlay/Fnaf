@@ -10,8 +10,11 @@
 
   <div id="rotate-prompt">
     <div class="rotate-icon">📱</div>
-    <p>Please rotate your device to landscape</p>
-  </div>
+    <p>
+        <strong>ROTATE DEVICE — ПОВЕРНИТЕ УСТРОЙСТВО</strong><br>
+        <span class="rotate-small">Landscape mode required / Нужен альбомный режим</span>
+    </p>
+</div>
 
   <div id="scale-wrapper">
     <div id="game-container">
@@ -262,28 +265,14 @@
 
       <div id="gameover-overlay" style="display:none">
         <div id="gameover-bg"></div>
-        <div id="gameover-text">
-          <span id="gameover-title">GAME OVER</span>
+        <div id="gameover-content"> <span id="gameover-title">GAME OVER</span>
           <div id="gameover-buttons">
-            <button id="btn-retry">Try Again</button>
-            <button id="btn-menu-go">Menu</button>
+            <button id="btn-how-to" class="go-btn">Need help?</button>
+            <button id="btn-retry" class="go-btn">Try Again</button>
+            <button id="btn-menu-go" class="go-btn">Menu</button>
           </div>
         </div>
-        <!--
-          ЗАДАЧА 3 — кнопка "Need help?" на экране Game Over.
-          Стили в game.css (#btn-need-help).
-          Позиционирована внизу слева, противоположный угол от GAME OVER.
-          onclick устанавливает fnaf_warned чтобы при возврате
-          в меню модалка не появилась.
-        -->
-        <a id="btn-need-help"
-           href="info.html"
-           onclick="sessionStorage.setItem('fnaf_warned','1')">
-          Need help?
-        </a>
-      </div>
-
-      <div id="win-overlay" style="display:none">
+      </div> <div id="win-overlay" style="display:none">
         <div id="win-content">
           <div id="win-title">6 AM</div>
           <div id="win-sub">You survived the night!</div>
@@ -294,10 +283,7 @@
         </div>
       </div>
 
-    </div>
-  </div>
-
-  <script src="js/config.js"></script>
+    </div> </div> <script src="js/config.js"></script>
   <script src="js/EventBus.js"></script>
   <script src="js/GameState.js"></script>
   <script src="js/SaveSystem.js"></script>
@@ -312,5 +298,6 @@
   <script src="js/InputSystem.js"></script>
   <script src="js/FanSystem.js"></script>
   <script src="js/main.js"></script>
+  
 </body>
 </html>

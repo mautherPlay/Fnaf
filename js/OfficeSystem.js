@@ -91,7 +91,7 @@ class OfficeSystem {
     else                 this.state.rightLight = on;
 
     if (on) {
-      this.sound.play('light_buzz');
+      
       this.sound.startLightHum();
       this._checkBlindSpotSound(side);
       // Start spotted countdown in AI

@@ -48,72 +48,116 @@ class InputSystem {
 
   // ── Per-frame lerp ───────────────────────────────────────────
   update(dt) {
-    const s = this.state;
-    if (!s.isPlaying() || s.cameraOpen) return;
-    const alpha = 1 - Math.pow(0.008, dt / 1000);
-    const diff  = s.panTarget - s.panCurrent;
-    if (Math.abs(diff) > 0.0002) s.panCurrent += diff * Math.min(alpha, 0.2);
-    else s.panCurrent = s.panTarget;
+  const s = this.state;
+  if (!s.isPlaying() || s.cameraOpen) return;
+
+  const delta = dt || 16.6;
+
+  // Если скорость задана (палец прижат), прибавляем её к текущей позиции
+  if (s.panSpeed !== 0) {
+    s.panCurrent += s.panSpeed * (delta / 16.6);
   }
+
+  // Ограничители
+  if (s.panCurrent < 0) s.panCurrent = 0;
+  if (s.panCurrent > 1) s.panCurrent = 1;
+
+  const scene = document.getElementById('scene-background');
+  if (scene) {
+    const xOffset = -s.panCurrent * 720;
+    scene.style.transform = `translate3d(${xOffset}px, 0, 0)`;
+  }
+}
 
   // ════════════════════════════════════════════════════════════
   // MOUSE
   // ════════════════════════════════════════════════════════════
   _bindMouse() {
-    const gc = this._gc;
-    gc.addEventListener('mousemove', (e) => {
-      if (!this.state.isPlaying() || this.state.cameraOpen) return;
-      const rect = gc.getBoundingClientRect();
-      const relX = (e.clientX - rect.left) / rect.width;
-      this.state.panTarget = Math.max(0, Math.min(1, relX));
-    });
-  }
+  const gc = this._gc;
+  
+  gc.addEventListener('mousemove', (e) => {
+    if (!this.state.isPlaying() || this.state.cameraOpen) {
+      this.state.panSpeed = 0;
+      return;
+    }
+
+    const rect = gc.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+
+    const deadzone = 0.15;
+    const maxSpeed = 0.045; // Повышенная скорость для ноутбука
+
+    if (Math.abs(relX) < deadzone) {
+      this.state.panSpeed = 0;
+    } else {
+      const direction = relX > 0 ? 1 : -1;
+      const force = (Math.abs(relX) - deadzone) / (1 - deadzone);
+      this.state.panSpeed = direction * force * maxSpeed;
+    }
+  });
+
+  gc.addEventListener('mouseleave', () => { this.state.panSpeed = 0; });
+}
 
   // ════════════════════════════════════════════════════════════
   // TOUCH  (swipe up = open, swipe down = close)
   // ════════════════════════════════════════════════════════════
   _bindTouch() {
-    const gc = this._gc;
+  const gc = this._gc;
 
-    gc.addEventListener('touchstart', (e) => {
-      const t = e.touches[0];
-      this._touchStartX = t.clientX;
-      this._touchStartY = t.clientY;
-      e.preventDefault();
-    }, { passive: false });
+  const updatePanFromTouch = (e) => {
+    const t = e.touches[0];
+    const rect = gc.getBoundingClientRect();
+    // Определяем положение пальца: -1 (лево), 0 (центр), 1 (право)
+    const relX = ((t.clientX - rect.left) / rect.width) * 2 - 1;
 
-    gc.addEventListener('touchmove', (e) => {
-      if (this.state.cameraOpen || !this.state.isPlaying()) return;
-      const t    = e.touches[0];
-      const dx   = Math.abs(t.clientX - this._touchStartX);
-      const dy   = Math.abs(t.clientY - this._touchStartY);
-      // Only pan if mostly horizontal
-      if (dx > dy) {
-        const rect = gc.getBoundingClientRect();
-        const relX = (t.clientX - rect.left) / rect.width;
-        this.state.panTarget = Math.max(0, Math.min(1, relX));
-      }
-      e.preventDefault();
-    }, { passive: false });
+    const deadzone = 0.1; 
+    const maxSpeed = 0.05; // Ещё быстрее для телефона
 
-    gc.addEventListener('touchend', (e) => {
-      const t     = e.changedTouches[0];
-      const rect  = gc.getBoundingClientRect();
-      const scale = rect.height / 540;
-      const dx    = Math.abs(t.clientX - this._touchStartX);
-      const dy    = (this._touchStartY - t.clientY) / scale; // +ve = upward
+    if (Math.abs(relX) < deadzone) {
+      this.state.panSpeed = 0;
+    } else {
+      const direction = relX > 0 ? 1 : -1;
+      const force = (Math.abs(relX) - deadzone) / (1 - deadzone);
+      // Математика разгона
+      this.state.panSpeed = direction * Math.pow(force, 1.1) * maxSpeed;
+    }
+  };
 
-      // Only treat as vertical swipe if mostly vertical
-      if (Math.abs(dy) > 50 && dx < 60 && this.state.isPlaying()) {
-        if (dy > 0 && !this.state.cameraOpen) {
-          this._openCameras();
-        } else if (dy < 0 && this.state.cameraOpen) {
-          this._tryCloseCameras();
-        }
-      }
-      e.preventDefault();
-    }, { passive: false });
-  }
+  gc.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    this._touchStartX = t.clientX;
+    this._touchStartY = t.clientY;
+    
+    if (!this.state.cameraOpen) {
+      updatePanFromTouch(e); // Сразу вычисляем скорость при касании
+    }
+  }, { passive: false });
+
+  gc.addEventListener('touchmove', (e) => {
+    if (!this.state.cameraOpen && this.state.isPlaying()) {
+      updatePanFromTouch(e); // Обновляем скорость при движении пальца
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  gc.addEventListener('touchend', (e) => {
+    this.state.panSpeed = 0; // Останавливаем камеру, когда палец поднят
+
+    // ТВОЙ КОД СВАЙПА КАМЕР
+    const t = e.changedTouches[0];
+    const rect = gc.getBoundingClientRect();
+    const scale = rect.height / 540;
+    const dx = Math.abs(t.clientX - this._touchStartX);
+    const dy = (this._touchStartY - t.clientY) / scale;
+
+    if (Math.abs(dy) > 50 && dx < 60 && this.state.isPlaying()) {
+      if (dy > 0 && !this.state.cameraOpen) this._openCameras();
+      else if (dy < 0 && this.state.cameraOpen) this._tryCloseCameras();
+    }
+    e.preventDefault();
+  }, { passive: false });
+}
 
   // ════════════════════════════════════════════════════════════
   // TRIGGER ZONES  — CLICK on PC, handled separately for touch
@@ -170,28 +214,63 @@ class InputSystem {
   // PANEL BUTTONS
   // ════════════════════════════════════════════════════════════
   _bindPanelButtons() {
-    document.querySelectorAll('.panel-btn').forEach(btn => {
-      const { side, action } = btn.dataset;
+  document.querySelectorAll('.panel-btn').forEach(btn => {
+    const { side, action } = btn.dataset;
 
+    // Универсальная функция для переключения (двери, вентилятор и т.д.)
+    const handleToggle = (e) => {
+      e.preventDefault();    // Убирает задержку в 300мс и фантомные клики
+      e.stopPropagation();   // Чтобы камера не дергалась при нажатии на кнопку
+      
       if (action === 'door') {
-        btn.addEventListener('click', (e) => { e.stopPropagation(); this.office.toggleDoor(side); });
-        btn.addEventListener('touchstart', (e) => { e.stopPropagation(); }, { passive: true });
-
-      } else if (action === 'light') {
-        btn.addEventListener('mousedown',  (e) => { e.stopPropagation(); e.preventDefault(); this.office.setLight(side, true); });
-        btn.addEventListener('mouseup',    (e) => { e.stopPropagation(); this.office.setLight(side, false); });
-        btn.addEventListener('mouseleave', ()  => { this.office.setLight(side, false); });
-        btn.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); this.office.setLight(side, true); }, { passive: false });
-        btn.addEventListener('touchend',   (e) => { e.stopPropagation(); this.office.setLight(side, false); }, { passive: false });
-        btn.addEventListener('touchcancel',(e) => { e.stopPropagation(); this.office.setLight(side, false); }, { passive: false });
+        this.office.toggleDoor(side);
+      } else if (action === 'fan') {
+        this.office.toggleFan(); // Сделаем задел на будущее для вентилятора
       }
-    });
+    };
 
-    window.addEventListener('mouseup', () => {
-      this.office.setLight('left',  false);
-      this.office.setLight('right', false);
-    });
-  }
+    if (action === 'door' || action === 'fan') {
+      // Для мобилок
+      btn.addEventListener('touchstart', handleToggle, { passive: false });
+      // для ПК
+      btn.addEventListener('click', (e) => {
+        // Если это был настоящий клик мышкой (а не эмуляция после тача)
+        if (e.detail !== 0) { 
+          e.stopPropagation();
+          this.office.toggleDoor(side); 
+        }
+      });
+
+    } else if (action === 'light') {
+      // Оставляем как есть, тут логика зажатия (hold) реализована верно
+      btn.addEventListener('mousedown', (e) => { e.stopPropagation(); e.preventDefault(); this.office.setLight(side, true); });
+      btn.addEventListener('mouseup',   (e) => { e.stopPropagation(); this.office.setLight(side, false); });
+      btn.addEventListener('mouseleave', ()  => { this.office.setLight(side, false); });
+      
+      btn.addEventListener('touchstart', (e) => { 
+        e.stopPropagation(); 
+        e.preventDefault(); 
+        this.office.setLight(side, true); 
+      }, { passive: false });
+      
+      btn.addEventListener('touchend', (e) => { 
+        e.stopPropagation(); 
+        e.preventDefault();
+        this.office.setLight(side, false); 
+      }, { passive: false });
+      
+      btn.addEventListener('touchcancel', (e) => { 
+        e.stopPropagation(); 
+        this.office.setLight(side, false); 
+      }, { passive: false });
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    this.office.setLight('left', false);
+    this.office.setLight('right', false);
+  });
+}
 
   // ════════════════════════════════════════════════════════════
   // KEYBOARD

@@ -18,29 +18,57 @@ html,body{
 .rotate-icon{font-size:52px;}
 @media (orientation:portrait) and (max-width:900px){#rotate-prompt{display:flex;}}
 
-#scale-wrapper{
-  width:100vw;height:100vh;display:flex;
-  align-items:center;justify-content:center;
-  background:#000;overflow:hidden;
+#scale-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
 }
-#game-container{
-  position:relative;width:1200px;height:540px;
-  overflow:hidden;background:#000;transform-origin:center center;
+
+#game-container {
+  position: absolute;
+  /* Размеры строго как в твоем проекте */
+  width: 1200px;
+  height: 540px;
+  background: #000;
+  overflow: hidden;
+  
+  /* Точка привязки — левый верхний угол, так проще считать в JS */
+  transform-origin: 0 0; 
 }
 
 /* ═══════════════════════════════════════════════════════════
    OFFICE VIEW
 ═══════════════════════════════════════════════════════════ */
-#office-view{
-  position:absolute;top:0;left:0;
-  width:1200px;height:540px;overflow:hidden;z-index:1;
+#office-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%; /* Должно быть равно ширине контейнера */
+  height: 100%;
+  overflow: visible; /* Позволяем фону внутри быть шире */
+  z-index: 1;
 }
-#scene-background{
-  position:absolute;top:0;left:0;width:1920px;height:540px;will-change:transform;
+#scene-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 540px;
+  will-change: transform;
 }
-#scene-image{
-  position:absolute;top:0;left:0;
-  width:1920px;height:540px;object-fit:fill;display:block;pointer-events:none;
+#scene-image {
+  max-width: none !important; /* Запрещаем сжимать картинку */
+  width: 1920px !important;
+  height: 540px;
+  object-fit: fill;
+  display: block;
+  pointer-events: none;
+  -webkit-backface-visibility: hidden; /* Для Safari и мобильных */
+backface-visibility: hidden;         /* Стандартное свойство */
 }
 
 .panel-container{position:absolute;top:190px;width:60px;height:160px;z-index:20;}
@@ -252,44 +280,273 @@ html,body{
   80%{opacity:1;}100%{opacity:0;}
 }
 
-/* GAME OVER */
-#gameover-overlay{position:absolute;inset:0;z-index:80;display:none;background:#000;}
-#gameover-bg{
-  position:absolute;inset:0;
-  background-image:url("../assets/images/ui/gameover_bg.png");
-  background-size:cover;background-position:center;
+/* ==========================================================================
+   GAME OVER SCREEN (Отцентрированный, мрачный, адаптивный с 3 кнопками)
+   ========================================================================== */
+#gameover-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1000; /* Самый высокий приоритет поверх всего */
+  display: none; /* Переключается на 'flex' в JS */
+  background: #000;
+  
+  /* Идеальное центрирование содержимого */
+  align-items: center;
+  justify-content: center;
+  
+  /* Отступы, чтобы текст не прилипал к краям на мобилках */
+  padding: clamp(20px, 5vw, 40px);
+  overflow: hidden;
+  user-select: none;
 }
-#gameover-text{position:absolute;bottom:60px;right:60px;text-align:right;}
-#gameover-title{
-  display:block;font-size:52px;font-weight:900;
-  letter-spacing:14px;color:#cc0000;text-transform:uppercase;
-  text-shadow:0 0 30px rgba(200,0,0,0.8),2px 2px 0 #000;
-  animation:go-flicker 6s ease-in-out infinite;
-}
-@keyframes go-flicker{0%,85%,100%{opacity:1;}86%{opacity:0.85;}88%{opacity:1;}91%{opacity:0.78;}93%{opacity:1;}}
-#gameover-buttons{display:flex;gap:16px;justify-content:flex-end;margin-top:28px;}
-#gameover-overlay button{
-  background:none;border:1px solid #441111;color:#882222;
-  font-family:'Courier New',monospace;font-size:12px;letter-spacing:3px;
-  padding:10px 24px;cursor:pointer;text-transform:uppercase;
-  transition:border-color 0.15s,color 0.15s;
-}
-#gameover-overlay button:hover{border-color:#aa3333;color:#cc4444;}
 
-/* WIN */
-#win-overlay{
-  position:absolute;inset:0;background:#000;
-  display:none;align-items:center;justify-content:center;z-index:80;
+/* ФОНОВАЯ КАРТИНКА */
+#gameover-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("../assets/images/ui/gameover_bg.png");
+  background-size: cover;
+  background-position: center;
+  
+  /* Делаем фон мрачнее, чтобы красный текст "горел" */
+  filter: brightness(0.4) contrast(1.3) grayscale(0.5);
+  z-index: 1;
 }
-#win-content{text-align:center;}
-#win-title{color:#ddb040;font-size:64px;letter-spacing:12px;margin-bottom:20px;text-shadow:0 0 30px rgba(220,180,60,0.5);}
-#win-sub  {color:#777;font-size:14px;letter-spacing:1px;margin-bottom:36px;}
-#win-buttons{display:flex;gap:16px;justify-content:center;}
-#win-overlay button{
-  background:#0d0d0d;border:2px solid #444;color:#bbb;
-  font-family:'Courier New',monospace;font-size:13px;letter-spacing:2px;
-  padding:12px 28px;cursor:pointer;
-  transition:border-color 0.18s,color 0.18s,background 0.18s;
+
+/* ЗАГЛУШКА ДЛЯ КОНТЕНТА (поверх фона) */
+#gameover-content {
+  position: relative;
+  z-index: 2; /* Поверх фона */
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  /* Ограничиваем ширину на больших экранах */
+  width: 100%;
+  max-width: 900px;
 }
-#win-overlay button:hover{border-color:#888;color:#fff;background:#1a1a1a;}
-#win-overlay button:disabled{opacity:0.35;cursor:default;pointer-events:none;}
+
+/* ЗАГОЛОВОК: GAME OVER */
+#gameover-title {
+  display: block;
+  font-weight: 900;
+  color: #cc0000;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 10px;
+  
+  /* Адаптивный шрифт */
+  font-size: clamp(36px, 10vw, 72px);
+  /* Адаптивный интервал */
+  letter-spacing: clamp(6px, 2vw, 16px);
+  /* Сдвиг влево на половину letter-spacing, чтобы текст был визуально по центру */
+  margin-right: -16px; 
+
+  /* Зловещее свечение */
+  text-shadow: 
+    0 0 20px rgba(200, 0, 0, 0.7),
+    0 0 40px rgba(150, 0, 0, 0.5),
+    3px 3px 0 #000; /* Четкий контур */
+    
+  animation: go-flicker-muddier 8s ease-in-out infinite;
+}
+
+/* ПОДЗАГОЛОВОК (если есть, например "Caught by Bonnie") */
+#gameover-sub {
+    color: #555;
+    text-transform: uppercase;
+    font-size: clamp(12px, 2.5vw, 14px);
+    letter-spacing: 2px;
+    margin-bottom: clamp(20px, 4vw, 40px);
+}
+
+/* КОНТЕЙНЕР ДЛЯ КНОПОК */
+#gameover-buttons {
+  display: flex;
+  gap: clamp(10px, 2vw, 20px); /* Адаптивный зазор между кнопками */
+  justify-content: center;
+  margin-top: 0; /* Сбрасываем старый отступ */
+  flex-wrap: wrap; /* Чтобы кнопки встали друг под друга на узких экранах */
+  width: 100%;
+  pointer-events: none; /* Контейнер пропускает клики */
+}
+
+/* ОБЩИЙ СТИЛЬ ДЛЯ ВСЕХ КНОПОК ОВЕРЛЕЯ */
+#gameover-overlay button {
+  pointer-events: auto !important; /* Кнопки ловят клики */
+  all: unset; /* Сброс системных стилей */
+  box-sizing: border-box; /* padding не увеличивает размер */
+  
+  background: rgba(15, 0, 0, 0.85); /* Мрачный, почти черный фон */
+  border: 1px solid #441111;
+  color: #882222;
+  font-family: 'Courier New', monospace;
+  
+  /* Удобный размер для тапа (крупнее на мобилках) */
+  font-size: clamp(13px, 3vw, 15px);
+  padding: clamp(14px, 3vw, 18px) clamp(20px, 4vw, 32px);
+  
+  letter-spacing: 2px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  min-width: 160px; /* Кнопки не должны быть слишком узкими */
+  text-align: center;
+  
+  /* Ускоряем тапы на мобилках */
+  touch-action: manipulation;
+  position: relative;
+  z-index: 10;
+}
+
+/* СПЕЦИАЛЬНЫЙ СТИЛЬ ДЛЯ КНОПКИ HOW TO PLAY (если нужен) */
+#gameover-overlay button#btn-how-to {
+    border-color: #555511; /* Янтарная рамка */
+    color: #aaaa33;
+}
+
+/* Эффекты при наведении (только ПК) */
+@media (hover: hover) {
+  #gameover-overlay button:hover {
+    border-color: #aa3333;
+    color: #ffcccc;
+    background: rgba(50, 10, 10, 0.6);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.15);
+    transform: translateY(-2px); /* Легкое всплытие */
+  }
+  /* Наведение для How to play */
+  #gameover-overlay button#btn-how-to:hover {
+      border-color: #dddd44;
+      color: #ffff88;
+      background: rgba(50, 50, 10, 0.6);
+  }
+}
+
+/* Эффект при нажатии */
+#gameover-overlay button:active {
+  transform: translateY(1px) scale(0.98);
+  filter: brightness(1.2);
+}
+
+/* СПЕЦИАЛЬНО ДЛЯ УЗКИХ ЭКРАНОВ (телефоны в портретном режиме) */
+@media (max-width: 540px) {
+  #gameover-buttons {
+    flex-direction: column; /* Кнопки в столбик */
+    gap: 12px;
+    align-items: center;
+  }
+  
+  #gameover-overlay button {
+    width: 100%;
+    max-width: 260px; /* Чтобы не были на весь экран */
+    min-width: unset;
+    padding: 16px 20px; /* Еще удобнее для пальца */
+  }
+}
+
+/* Мрачная анимация мерцания */
+@keyframes go-flicker-muddier {
+  0%, 80%, 100% { opacity: 1; filter: blur(0px); }
+  82% { opacity: 0.8; filter: blur(1px); brightness: 1.2; }
+  83% { opacity: 1; filter: blur(0px); }
+  85% { opacity: 0.5; filter: blur(2px); }
+  86% { opacity: 0.9; filter: blur(0px); }
+  90% { opacity: 1; }
+}
+
+/* WIN OVERLAY */
+#win-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none; /* Переключается на flex в JS */
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  user-select: none;
+}
+
+#win-content {
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+#win-title {
+  color: #ddb040;
+  /* Адаптивный размер: от 36px на мобилках до 64px на ПК */
+  font-size: clamp(36px, 12vw, 64px); 
+  letter-spacing: clamp(4px, 2vw, 12px);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-weight: 900;
+  text-shadow: 0 0 30px rgba(220, 180, 60, 0.5), 2px 2px 0 #000;
+  line-height: 1.2;
+}
+
+#win-sub {
+  color: #777;
+  font-size: clamp(12px, 3vw, 14px);
+  letter-spacing: 1px;
+  margin-bottom: clamp(24px, 5vw, 40px);
+  text-transform: uppercase;
+}
+
+#win-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap; /* Чтобы кнопки встали друг под друга на узких экранах */
+}
+
+#win-overlay button {
+  background: #0d0d0d;
+  border: 2px solid #444;
+  color: #bbb;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 14px 32px; /* Увеличенная зона для тапа */
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  min-width: 160px;
+  touch-action: manipulation;
+}
+
+/* Эффекты только для устройств с мышкой */
+@media (hover: hover) {
+  #win-overlay button:hover {
+    border-color: #ddb040; /* Золотая рамка при наведении */
+    color: #fff;
+    background: #1a1a1a;
+    box-shadow: 0 0 15px rgba(221, 176, 64, 0.2);
+  }
+}
+
+#win-overlay button:active {
+  transform: scale(0.96); /* Эффект нажатия */
+}
+
+#win-overlay button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Мобильная оптимизация */
+@media (max-width: 480px) {
+  #win-buttons {
+    flex-direction: column; /* Кнопки в столбик на очень маленьких экранах */
+    align-items: center;
+  }
+  
+  #win-overlay button {
+    width: 100%;
+    max-width: 240px;
+  }
+}
+
+
