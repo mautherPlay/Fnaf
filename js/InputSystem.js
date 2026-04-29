@@ -144,18 +144,29 @@ class InputSystem {
   gc.addEventListener('touchend', (e) => {
     this.state.panSpeed = 0; // Останавливаем камеру, когда палец поднят
 
-    // ТВОЙ КОД СВАЙПА КАМЕР
+    // ТВОЙ КОД СВАЙПА КАМЕР (ОБНОВЛЕННЫЙ)
     const t = e.changedTouches[0];
     const rect = gc.getBoundingClientRect();
     const scale = rect.height / 540;
     const dx = Math.abs(t.clientX - this._touchStartX);
     const dy = (this._touchStartY - t.clientY) / scale;
 
-    if (Math.abs(dy) > 50 && dx < 60 && this.state.isPlaying()) {
-      if (dy > 0 && !this.state.cameraOpen) this._openCameras();
-      else if (dy < 0 && this.state.cameraOpen) this._tryCloseCameras();
+    // ПАРАМЕТРЫ ЗАЩИТЫ: 
+    // dy > 100 (длина свайпа), dx < 40 (вертикальность), bottom - 120 (зона у нижнего края)
+    const isBottomZone = this._touchStartY > (rect.bottom - 180 * scale);
+    const isLongSwipe = Math.abs(dy) > 100;
+    const isVertical = dx < 60;
+
+    if (isLongSwipe && isVertical && this.state.isPlaying()) {
+      if (dy > 0 && isBottomZone && !this.state.cameraOpen) {
+        this._openCameras();
+      } 
+      else if (dy < 0 && this.state.cameraOpen) {
+        this._tryCloseCameras();
+      }
     }
-    e.preventDefault();
+
+    if (e.cancelable) e.preventDefault();
   }, { passive: false });
 }
 

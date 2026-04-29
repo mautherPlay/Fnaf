@@ -201,35 +201,17 @@ alignGame();
 resizeGame();
 
 function updateScale() {
-
     const game = document.getElementById('game-container');
-
     if (!game) return;
 
-
-
     const baseWidth = 1200;
-
     const baseHeight = 540;
 
-
-
-    // Считаем масштаб исходя из размеров окна браузера
-
     const scale = Math.min(
-
         window.innerWidth / baseWidth,
-
         window.innerHeight / baseHeight
-
     );
 
-
-
-    // Применяем центрирование и масштаб одновременно
-
-    // translate(-50%, -50%) работает вместе с CSS top:50%; left:50%
-
+    // Центрируем и масштабируем одновременно
     game.style.transform = `translate(-50%, -50%) scale(${scale})`;
-
 }
