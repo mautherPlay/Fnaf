@@ -126,10 +126,10 @@ const CONFIG = {
 
   AI_LEVELS: {
     1: { freddy: 0,  bonnie: 1,  chica: 1,  foxy: 1  },
-    2: { freddy: 0,  bonnie: 3,  chica: 1,  foxy: 2  },
-    3: { freddy: 1,  bonnie: 7,  chica: 5,  foxy: 6  },
-    4: { freddy: 2,  bonnie: 12, chica: 10, foxy: 15 },
-    5: { freddy: 3,  bonnie: 16, chica: 14, foxy: 18 },
+    2: { freddy: 1,  bonnie: 3,  chica: 2,  foxy: 2  },
+    3: { freddy: 2,  bonnie: 7,  chica: 5,  foxy: 6  },
+    4: { freddy: 3,  bonnie: 12, chica: 10, foxy: 15 },
+    5: { freddy: 4,  bonnie: 16, chica: 14, foxy: 18 },
   },
 
   NIGHT_ESCALATION: {
