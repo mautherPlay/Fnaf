@@ -126,3 +126,117 @@ html,body{
   animation:skip-pulse 2s ease-in-out infinite;
 }
 @keyframes skip-pulse{0%,100%{opacity:0.3;}50%{opacity:0.8;}}
+
+
+/* 📱 Safe area */
+body{
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  overflow-x: hidden;
+}
+
+/* 🎬 Видео оптимизация */
+.background video{
+  object-fit: cover;
+  object-position: center center;
+  transform: translateZ(0);
+}
+
+/* ❗ НЕ блокируем клики */
+.background,
+.noise-overlay{
+  pointer-events: none;
+}
+
+/* 📱 Увеличиваем зону клика */
+.nav-btn{
+  padding: 14px 0;
+}
+
+
+/* 📱 ОСНОВНОЙ mobile-блок (ширина) */
+@media (max-width: 768px){
+
+  .menu-wrap{
+    padding: 0 20px;
+    gap: 24px;
+  }
+
+  .title-line{
+    font-size: clamp(26px, 8vw, 52px);
+    line-height: 1.05;
+  }
+
+  .title-at{
+    font-size: clamp(18px, 6vw, 38px);
+  }
+
+  .title-sub{
+    margin-top: 6px;
+  }
+
+  .nav-block{
+    gap: 10px;
+  }
+
+  .nav-btn{
+    font-size: 20px;
+  }
+
+  .menu-footer{
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+
+/* 🔥 КЛЮЧЕВОЙ фикс — маленькая ВЫСОТА */
+@media (max-height: 800px){
+
+  .menu-wrap{
+    gap: 18px;
+  }
+
+  .title-line{
+    font-size: clamp(22px, 6vw, 40px);
+  }
+
+  .title-at{
+    font-size: clamp(16px, 5vw, 30px);
+  }
+
+  .nav-btn{
+    font-size: 18px;
+    padding: 10px 0;
+  }
+
+}
+
+
+/* 💀 ЭКСТРЕМАЛЬНО маленькие экраны */
+@media (max-height: 700px){
+
+  .menu-wrap{
+    gap: 12px;
+  }
+
+  .title-line{
+    font-size: clamp(18px, 5vw, 32px);
+  }
+
+  .title-at{
+    font-size: clamp(14px, 4vw, 24px);
+  }
+
+  .title-sub{
+    font-size: 12px;
+  }
+
+  .nav-btn{
+    font-size: 16px;
+    padding: 8px 0;
+  }
+
+}
+
