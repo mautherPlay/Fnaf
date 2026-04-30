@@ -59,22 +59,33 @@ class SoundSystem {
   preload() {
     this._allIds.forEach(id => this._load(id));
 
-    // Resume audio on first user interaction
-    window.addEventListener('click',   this._unlockBound, { once: true });
+    // Настройка разблокировки звука
+    window.addEventListener('click', this._unlockBound, { once: true });
     window.addEventListener('keydown', this._unlockBound, { once: true });
     window.addEventListener('touchstart', this._unlockBound, { once: true });
   }
 
-  // Try to play a silent buffer to unlock the AudioContext
+  // Внутренний метод загрузки (проверьте, есть ли он у вас, если нет — добавьте)
+  _load(id) {
+    const audio = new Audio(`assets/sounds/${id}.mp3`);
+    audio.preload = 'auto'; // Важно для GitHub Pages
+    this._cache[id] = audio;
+  }
+
   _unlock() {
     this._ready = true;
-    // Try to resume any stalled plays
-    Object.values(this._cache).forEach(a => {
-      if (!a.paused) return;
-      // Only re-trigger loops that were already meant to be playing
+    console.log("SoundSystem: Audio unlocked");
+    
+    // Попытка возобновить заблокированные цикличные звуки
+    Object.keys(this._loops).forEach(id => {
+      const audio = this._loops[id];
+      if (audio.paused) {
+        audio.play().catch(() => {});
+      }
     });
-    window.removeEventListener('click',    this._unlockBound);
-    window.removeEventListener('keydown',  this._unlockBound);
+
+    window.removeEventListener('click', this._unlockBound);
+    window.removeEventListener('keydown', this._unlockBound);
     window.removeEventListener('touchstart', this._unlockBound);
   }
 
@@ -83,39 +94,58 @@ class SoundSystem {
     if (this._muted) return;
     const audio = this._get(id);
     if (!audio) return;
-    audio.volume      = this._volume;
+
+    // КРИТИЧЕСКИЙ ИСПРАВЛЕНИЕ: Останавливаем старую попытку перед новой
+    audio.pause();
     audio.currentTime = 0;
-    audio.play().catch(() => {
-      // Autoplay blocked — retry on next user event
-      const retry = () => { audio.play().catch(() => {}); };
-      window.addEventListener('click',    retry, { once: true });
-      window.addEventListener('keydown',  retry, { once: true });
-      window.addEventListener('touchstart', retry, { once: true });
-    });
+    audio.volume = this._volume;
+
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        // Ошибка "NotAllowedError" — ждем клика. Остальные — проблемы сети/формата.
+        if (error.name === 'NotAllowedError') {
+          const retry = () => { audio.play().catch(() => {}); };
+          window.addEventListener('click', retry, { once: true });
+          window.addEventListener('touchstart', retry, { once: true });
+        } else {
+          console.warn(`SoundSystem: Playback failed for [${id}]:`, error.message);
+        }
+      });
+    }
   }
 
   // ── Start a looping sound ────────────────────────────────────
   loop(id, volumeScale = 0.5) {
     if (this._muted) return;
-    if (this._loops[id]) return;  // already running
+    if (this._loops[id]) return; 
 
     const audio = this._get(id);
     if (!audio) return;
-    audio.loop   = true;
+
+    audio.loop = true;
     audio.volume = this._volume * volumeScale;
-    audio.play().catch(() => {
-      const retry = () => {
-        if (!this._muted) audio.play().catch(() => {});
-      };
-      window.addEventListener('click', retry, { once: true });
-    });
+
     this._loops[id] = audio;
+
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        const retry = () => { 
+          if (!this._muted && this._loops[id]) audio.play().catch(() => {}); 
+        };
+        window.addEventListener('click', retry, { once: true });
+        window.addEventListener('touchstart', retry, { once: true });
+      });
+    }
   }
 
   // ── Stop a specific sound ────────────────────────────────────
   stop(id) {
     const audio = this._cache[id];
     if (!audio) return;
+    
     audio.pause();
     audio.currentTime = 0;
     delete this._loops[id];
@@ -125,11 +155,18 @@ class SoundSystem {
   stopAll() {
     Object.keys(this._cache).forEach(id => {
       try {
-        this._cache[id].pause();
-        this._cache[id].currentTime = 0;
-      } catch (_) {}
+        const audio = this._cache[id];
+        audio.pause();
+        audio.currentTime = 0;
+        audio.loop = false; // Сбрасываем флаг цикла
+      } catch (e) {
+        console.error("Error stopping sound:", id, e);
+      }
     });
     this._loops = {};
+  }
+  _get(id) {
+    return this._cache[id];
   }
 
   // ── Ambience helpers ─────────────────────────────────────────
