@@ -212,13 +212,30 @@ class AnimatronicAI {
   }
 
   _moveTo(name, newRoom) {
-    const a = this.state.animatronics[name];
-    const old = a.position;
-    if (newRoom === old || newRoom === 'STAY') return;
+    try {
+      const a = this.state.animatronics[name];
+      const old = a.position;
+      
+      if (newRoom === old || newRoom === 'STAY') return;
 
-    a.position = newRoom;
-    EventBus.emit('animatronicMoved', { name, from: old, to: newRoom });
-    this._playMoveSound(name, newRoom);
+      a.position = newRoom;
+      EventBus.emit('animatronicMoved', { name, from: old, to: newRoom });
+      
+      this._playMoveSound(name, newRoom);
+
+      // ФИНАЛЬНАЯ ЛОГИКА ДЛЯ ЧИКИ
+      if (name === 'chica') {
+        // Приводим комнату к строке и верхнему регистру (KITCHEN)
+        const roomName = String(newRoom).toUpperCase();
+        
+        if (roomName === 'KITCHEN' || roomName === '6') {
+          this.sound.play('kitchen_chica');
+          console.log("Звук кухни успешно запущен для Чики!");
+        }
+      }
+    } catch (e) {
+      console.error("Ошибка в _moveTo:", e);
+    }
   }
 
   _playMoveSound(name, room) {

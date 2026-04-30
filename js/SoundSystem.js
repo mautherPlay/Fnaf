@@ -49,6 +49,7 @@ class SoundSystem {
       'phone_guy_night2',
       'phone_guy_night3',
       'phone_guy_night4',  // NEW
+      'kitchen_chica'
     ];
 
     this._unlockBound = this._unlock.bind(this);
