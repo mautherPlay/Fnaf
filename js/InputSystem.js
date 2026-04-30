@@ -152,10 +152,10 @@ class InputSystem {
     const dy = (this._touchStartY - t.clientY) / scale;
 
     // ПАРАМЕТРЫ ЗАЩИТЫ: 
-    // dy > 100 (длина свайпа), dx < 40 (вертикальность), bottom - 120 (зона у нижнего края)
+    // dy > 100 (длина свайпа), dx < 100 (вертикальность), bottom - 120 (зона у нижнего края)
     const isBottomZone = this._touchStartY > (rect.bottom - 180 * scale);
     const isLongSwipe = Math.abs(dy) > 100;
-    const isVertical = dx < 60;
+    const isVertical = dx < 100;
 
     if (isLongSwipe && isVertical && this.state.isPlaying()) {
       if (dy > 0 && isBottomZone && !this.state.cameraOpen) {
