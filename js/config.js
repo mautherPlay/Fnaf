@@ -144,8 +144,10 @@ const CONFIG = {
 
   FREDDY_UNOBSERVED_ONLY: true,
   FREDDY_LAUGH_MIN_NIGHT: 3,
-  FREDDY_POWER_MUSIC_MS:  10_800,
-  FREDDY_POWER_ENTER_MS:  3_000,
+  FREDDY_POWER_MUSIC_MS:  16_000,   // Toreador March plays for ~16 s
+    FREDDY_POWER_FADE_MS:    2_000,   // then fades out over 2 s
+    FREDDY_POWER_DARK_MIN:   2_000,   // silent darkness: min 2 s
+    FREDDY_POWER_DARK_MAX:   6_000,   // silent darkness: max 6 s
 
   // ─── Foxy ────────────────────────────────────────────────────
   // Formula per tick: if randomInt(0,19) < aiLevel * playerModifier → tick++

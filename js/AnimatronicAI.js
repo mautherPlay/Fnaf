@@ -9,14 +9,33 @@ class AnimatronicAI {
     this._spottedLeft   = 0;
     this._spottedRight  = 0;
     this._kitchenTimers = { chica: 0, freddy: 0 };
-    this._penaltyTicks = { bonnie: 0, chica: 0, freddy: 0 };
+    this._penaltyTicks  = { bonnie: 0, chica: 0, freddy: 0 };
 
     EventBus.on('cameraClosed',   ()   => this._onCamerasClosed());
     EventBus.on('cameraSwitched', (id) => this._onCameraSwitched(id));
   }
 
+  // ── Update ───────────────────────────────────────────────────
+  /**
+   * Runs during OFFICE, CAMERA, and POWER_OUT.
+   *
+   * POWER_OUT behaviour:
+   *   Phase 1 (deciding, 0-2 s):
+   *     All animatronics tick. If Bonnie/Chica/Foxy are already at a
+   *     blind spot with an open door they CAN jumpscare the player —
+   *     the player should have closed the door before power ran out.
+   *
+   *   Phase 2+ (Freddy's sequence active):
+   *     Bonnie/Chica/Foxy still MOVE (position updates continue) but
+   *     are BLOCKED from firing a jumpscare. The screen belongs to Freddy.
+   *     See _triggerJumpscare() for the guard.
+   *
+   *   Freddy's own tick is always skipped during POWER_OUT —
+   *   PowerSystem owns his behaviour exclusively in that phase.
+   */
   update(deltaTime) {
-    if (!this.state.isPlaying()) return;
+    const phase = this.state.phase;
+    if (!this.state.isPlaying() && phase !== 'POWER_OUT') return;
 
     this._tickAccum += deltaTime;
     if (this._tickAccum >= CONFIG.AI_TICK_MS) {
@@ -31,23 +50,21 @@ class AnimatronicAI {
   _doTick() {
     this._tickBonnie();
     this._tickChica();
-    this._tickFreddy();
+    this._tickFreddy(); // guards against POWER_OUT internally
     this._tickFoxy();
   }
 
-  // ── Bonnie (FIXED) ───────────────────────────────────────────
+  // ── Bonnie ───────────────────────────────────────────────────
   _tickBonnie() {
     const a = this.state.animatronics.bonnie;
     if (!a.active || a.aiLevel === 0) return;
 
-    // Если он у двери, он ДОЛЖЕН сделать попытку уйти или напасть.
-    // Оставляем шанс (roll), но если он выпал — решаем судьбу у двери.
     if (a.position === 'LEFT_BLIND_SPOT') {
-      if (!this._roll(a)) return; 
+      if (!this._roll(a)) return;
 
       if (this.state.isDoorClosed('left')) {
         this._penaltyTicks.bonnie = CONFIG.ATTACK_PENALTY_TICKS;
-        this._forceRetreat('bonnie'); // Теперь работает корректно
+        this._forceRetreat('bonnie');
       } else {
         this._triggerJumpscare('bonnie');
       }
@@ -58,7 +75,7 @@ class AnimatronicAI {
     this._graphMove('bonnie');
   }
 
-  // ── Chica (FIXED) ─────────────────────────────────────────────
+  // ── Chica ─────────────────────────────────────────────────────
   _tickChica() {
     const a = this.state.animatronics.chica;
     if (!a.active || a.aiLevel === 0) return;
@@ -79,8 +96,15 @@ class AnimatronicAI {
     this._graphMove('chica');
   }
 
-  // ── Freddy (ORIGINAL LOGIC) ───────────────────────────────────
+  // ── Freddy ────────────────────────────────────────────────────
+  /**
+   * Completely skipped during POWER_OUT — PowerSystem owns Freddy then.
+   * During normal play his RIGHT_BLIND_SPOT attack only fires if the door
+   * is open AND the player is not shining the light (same as original).
+   */
   _tickFreddy() {
+    if (this.state.phase === 'POWER_OUT') return;
+
     const a = this.state.animatronics.freddy;
     if (!a.active || a.aiLevel === 0) return;
 
@@ -107,6 +131,7 @@ class AnimatronicAI {
     }
   }
 
+  // ── Foxy ─────────────────────────────────────────────────────
   _tickFoxy() {
     const foxy = this.state.animatronics.foxy;
     if (!foxy.active || foxy.running || foxy.waitingToRun) return;
@@ -134,10 +159,10 @@ class AnimatronicAI {
     }
   }
 
-  // ═════════════════════════════════════════════════════════════
-  // MOVEMENT LOGIC
-  // ═════════════════════════════════════════════════════════════
-  
+  // ═══════════════════════════════════════════════════════════════
+  // MOVEMENT
+  // ═══════════════════════════════════════════════════════════════
+
   _graphMove(name) {
     const a = this.state.animatronics[name];
     const graph = MOVEMENT_GRAPH[name];
@@ -165,22 +190,15 @@ class AnimatronicAI {
     }
   }
 
-  /**
-   * Телепортация после блокировки дверью.
-   * Использует веса из TELEPORT_ZONES (60% / 30% / 10%).
-   */
   _forceRetreat(name) {
-    // Фредди не отступает — выходим сразу
     if (name === 'freddy') return;
 
     const data = TELEPORT_ZONES[name];
     if (!data) return;
 
-    const roll = Math.random(); // Генерируем от 0 до 1
+    const roll = Math.random();
     let selectedRooms = [];
 
-    // Определяем зону на основе твоих весов
-    // Far: 0.0 - 0.60 | Mid: 0.60 - 0.90 | Close: 0.90 - 1.0
     if (roll < data.far.weight) {
       selectedRooms = data.far.rooms;
     } else if (roll < (data.far.weight + data.mid.weight)) {
@@ -189,13 +207,8 @@ class AnimatronicAI {
       selectedRooms = data.close.rooms;
     }
 
-    // На всякий случай проверяем, есть ли комнаты в выбранной зоне
     if (selectedRooms.length > 0) {
       const chosenRoom = selectedRooms[Math.floor(Math.random() * selectedRooms.length)];
-      
-      // Логируем для отладки (потом можно убрать)
-      console.log(`[AI] ${name} отступает в зону телепортации: ${chosenRoom}`);
-      
       this._moveTo(name, chosenRoom);
     }
   }
@@ -213,79 +226,67 @@ class AnimatronicAI {
 
   _moveTo(name, newRoom) {
     try {
-      const a = this.state.animatronics[name];
+      const a   = this.state.animatronics[name];
       const old = a.position;
-      
+
       if (newRoom === old || newRoom === 'STAY') return;
 
       a.position = newRoom;
       EventBus.emit('animatronicMoved', { name, from: old, to: newRoom });
-      
+
       this._playMoveSound(name, newRoom);
 
-      // ФИНАЛЬНАЯ ЛОГИКА ДЛЯ ЧИКИ
       if (name === 'chica') {
-        // Приводим комнату к строке и верхнему регистру (KITCHEN)
-        const roomName = String(newRoom).toUpperCase();
-        
-        if (roomName === 'KITCHEN' || roomName === '6') {
+        if (String(newRoom).toUpperCase() === 'KITCHEN') {
           this.sound.play('kitchen_chica');
-          console.log("Звук кухни успешно запущен для Чики!");
         }
       }
     } catch (e) {
-      console.error("Ошибка в _moveTo:", e);
+      console.error('Error in _moveTo:', e);
     }
   }
 
   _playMoveSound(name, room) {
     if (name === 'freddy' && this.state.powerOutPhase === 0) return;
     const prob = SOUND_ZONES[room] ?? 0;
-    if (Math.random() < prob) {
-      this.sound.play('animatronic_move');
-    }
+    if (Math.random() < prob) this.sound.play('animatronic_move');
   }
 
-  // ═════════════════════════════════════════════════════════════
-  // ОСТАЛЬНЫЕ МЕТОДЫ (FOXY, SPOTTED, KITCHEN) - БЕЗ ИЗМЕНЕНИЙ
-  // ═════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
+  // FOXY
+  // ═══════════════════════════════════════════════════════════════
+
   _foxyRun() {
     const foxy = this.state.animatronics.foxy;
-    foxy.running = true;
-    foxy.runTimer = 0;
+    foxy.running      = true;
+    foxy.runTimer     = 0;
     foxy.waitingToRun = false;
-    foxy.peekShown = false;
-    foxy.position = 'WEST_HALL';
-    
+    foxy.peekShown    = false;
+    foxy.position     = 'WEST_HALL';
+
     this.sound.play('foxy_run');
-    
-    // Твой EventBus работает здесь штатно
-    EventBus.emit('foxyRunning'); 
+    EventBus.emit('foxyRunning');
 
     let lastTimestamp = performance.now();
 
     const step = (currentTimestamp) => {
-      if (!this.state.isPlaying()) return;
+      if (!this.state.isPlaying() && this.state.phase !== 'POWER_OUT') return;
 
-      // Решаем проблему слишком быстрого бега (FPS-независимость)
       const dt = currentTimestamp - lastTimestamp;
       lastTimestamp = currentTimestamp;
-
       foxy.runTimer += dt;
 
-      // Смена позиции в коридоре (через 0.5 сек)
       if (foxy.runTimer > 500 && foxy.position !== 'WEST_HALL_RUNNING') {
         foxy.position = 'WEST_HALL_RUNNING';
         EventBus.emit('animatronicMoved', { name: 'foxy', to: 'WEST_HALL_RUNNING' });
       }
 
-      // Достижение двери (через CONFIG.FOXY_CHARGE_DURATION_MS)
       if (foxy.runTimer >= CONFIG.FOXY_CHARGE_DURATION_MS) {
-        foxy.running = false;
+        foxy.running  = false;
         foxy.position = 'LEFT_BLIND_SPOT';
         EventBus.emit('animatronicMoved', { name: 'foxy', to: 'LEFT_BLIND_SPOT' });
         this._foxyAtDoor();
-        return; 
+        return;
       }
 
       requestAnimationFrame(step);
@@ -296,17 +297,17 @@ class AnimatronicAI {
 
   _foxyAtDoor() {
     const state = this.state;
-    const foxy = state.animatronics.foxy;
+    const foxy  = state.animatronics.foxy;
     if (state.isDoorClosed('left')) {
       EventBus.emit('foxyDoorHit');
       state.power = Math.max(0, state.power - CONFIG.FOXY_KNOCK_POWER);
       EventBus.emit('powerChanged', state.power);
       EventBus.emit('foxyKnock');
       setTimeout(() => {
-        foxy.position = 'PIRATE_COVE';
+        foxy.position   = 'PIRATE_COVE';
         foxy.phaseTimer = 0;
-        foxy.phase = 0;
-        EventBus.emit('animatronicMoved', { name:'foxy', to:'PIRATE_COVE' });
+        foxy.phase      = 0;
+        EventBus.emit('animatronicMoved', { name: 'foxy', to: 'PIRATE_COVE' });
         EventBus.emit('foxyPhaseChanged', 0);
       }, 1200);
     } else {
@@ -328,27 +329,31 @@ class AnimatronicAI {
     foxy.peekShown = true;
     EventBus.emit('foxyPeekCam2A');
     setTimeout(() => {
-      if (!this.state.isPlaying()) return;
+      if (!this.state.isPlaying() && this.state.phase !== 'POWER_OUT') return;
       foxy.waitingToRun = false;
       this._foxyRun();
     }, CONFIG.FOXY_PEEK_DELAY_MS);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // SPOTTED / KITCHEN / ROLL
+  // ═══════════════════════════════════════════════════════════════
+
   startSpottedCountdown(side) {
     const delay = 4000 + Math.random() * 3000;
-    if (side === 'left') this._spottedLeft = delay;
-    else this._spottedRight = delay;
+    if (side === 'left') this._spottedLeft  = delay;
+    else                 this._spottedRight = delay;
   }
 
   cancelSpotted(side) {
-    if (side === 'left') this._spottedLeft = 0;
-    else this._spottedRight = 0;
+    if (side === 'left') this._spottedLeft  = 0;
+    else                 this._spottedRight = 0;
   }
 
   _updateSpotted(dt) {
     if (this._spottedLeft > 0) {
       this._spottedLeft -= dt;
-      if (this._spottedLeft <= 0) { this._spottedLeft = 0; this._resolveSpotted('left'); }
+      if (this._spottedLeft <= 0)  { this._spottedLeft  = 0; this._resolveSpotted('left'); }
     }
     if (this._spottedRight > 0) {
       this._spottedRight -= dt;
@@ -380,7 +385,7 @@ class AnimatronicAI {
       this._kitchenTimers[name] += dt;
       if (this._kitchenTimers[name] >= CONFIG.KITCHEN_LINGER_MAX_MS) {
         this._kitchenTimers[name] = 0;
-        const graph = MOVEMENT_GRAPH[name];
+        const graph   = MOVEMENT_GRAPH[name];
         const options = (graph && graph[a.position]) || [];
         const forward = options.filter(o =>
           o.room !== 'STAY' && o.room !== 'BATHROOMS' && o.room !== 'KITCHEN' &&
@@ -398,11 +403,37 @@ class AnimatronicAI {
     return Math.floor(Math.random() * CONFIG.ATTACK_ROLL_MAX) + 1 <= anim.aiLevel;
   }
 
+  // ── Jumpscare trigger ─────────────────────────────────────────
+  /**
+   * Central jumpscare entry point for Bonnie, Chica, Foxy, and normal Freddy.
+   * (Freddy's POWER_OUT attack goes through PowerSystem, not here.)
+   *
+   * Priority rule — mirrors original FNAF1 "power-out = Freddy's moment":
+   *   Phase 1 (0-2 s deciding window): any animatronic can still jumpscare.
+   *     The player had their chance to close the door before power ran out.
+   *   Phase 2+ (Toreador March / eyes / countdown active): only Freddy's
+   *     power-out sequence plays. Bonnie/Chica/Foxy are BLOCKED even if
+   *     they are at a blind spot with an open door. They stay in position
+   *     and continue moving, but cannot fire a jumpscare.
+   *
+   * Visual note: during POWER_OUT SceneRenderer ignores Bonnie/Chica
+   * positions entirely and only shows backup_power / freddy_eyes images,
+   * so there is zero visual conflict regardless of who is where.
+   */
   _triggerJumpscare(who) {
     const s = this.state;
+
+    // Already in a jumpscare or game-over — never double-fire
     if (s.phase === 'JUMPSCARE' || s.phase === 'GAME_OVER') return;
+
+    // Freddy's sequence is running (phase 2+) — block all other jumpscares.
+    // Phase 1 (0-2 s before the decision is made) is intentionally allowed,
+    // because in that window power JUST cut out and the animatronic was
+    // already standing at the door.
+    if (s.phase === 'POWER_OUT' && s.powerOutPhase >= 2) return;
+
     s.jumpscareTarget = who;
-    s.caughtBy = who.charAt(0).toUpperCase() + who.slice(1);
+    s.caughtBy        = who.charAt(0).toUpperCase() + who.slice(1);
     s.setPhase('JUMPSCARE');
     this.sound.stopAll();
     this.sound.play('jumpscare');
@@ -429,10 +460,10 @@ class AnimatronicAI {
     a.bonnie.position = 'STAGE';
     a.chica.position  = 'STAGE';
     a.foxy.position   = 'PIRATE_COVE';
-    a.foxy.phase = 0;
+    a.foxy.phase      = 0;
     a.foxy.phaseTimer = 0;
-    this._tickAccum = 0;
-    this._penaltyTicks = { bonnie: 0, chica: 0, freddy: 0 };
+    this._tickAccum   = 0;
+    this._penaltyTicks  = { bonnie: 0, chica: 0, freddy: 0 };
     this._kitchenTimers = { chica: 0, freddy: 0 };
   }
 }

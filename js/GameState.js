@@ -35,6 +35,7 @@ class GameState {
     this.jumpscareTarget = null;
     this.caughtBy        = '';
     this.powerOutPhase   = 0;
+    this.powerOutFreddyEyes = false; // Добавь это рядом с powerOutPhase
     this.nightRunning    = false;
   }
 

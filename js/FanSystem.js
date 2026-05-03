@@ -8,23 +8,27 @@
  * Audio start rule:
  *   Ambience starts ONLY when EventBus emits 'phaseChange' → 'OFFICE'.
  *   This prevents double-play during the Night intro overlay.
- *   There is ONE audio path — no fallback <audio> running in parallel.
  *
- * Seamless loop:
- *   AudioBufferSourceNode.loop = true — zero gap between iterations.
+ * Power rule:
+ *   Fan cannot be turned ON when state.power === 0.
+ *   If power runs out while the fan is on, FanSystem.stopAmbience()
+ *   is called from main.js via the 'powerOut' event, which cuts the
+ *   audio. The fan video is hidden by SceneRenderer during POWER_OUT.
+ *   On the next night start, resumeIfOn() restores the fan video and
+ *   the 'phaseChange' → 'OFFICE' event restarts the audio.
  */
 class FanSystem {
   constructor(state) {
     this.state    = state;
     this._fanOn   = true;
 
-    this._actx    = null;   // AudioContext
-    this._ambBuf  = null;   // AudioBuffer for ambience.mp3
-    this._ambNode = null;   // currently playing BufferSourceNode
-    this._ambGain = null;   // GainNode (volume)
-    this._honkBuf = null;   // AudioBuffer for freddy_nose_honk.mp3
+    this._actx    = null;
+    this._ambBuf  = null;
+    this._ambNode = null;
+    this._ambGain = null;
+    this._honkBuf = null;
 
-    this._audioReady = false;  // true once actx + ambBuf are loaded
+    this._audioReady = false;
 
     this._fanVideo = null;
     this._fanBtn   = null;
@@ -37,63 +41,42 @@ class FanSystem {
     this._fanBtn   = document.getElementById('fan-hitbox');
     this._noseBtn  = document.getElementById('nose-hitbox');
 
-    // Fan video — muted, loops visually, starts immediately
     if (this._fanVideo) {
-      this._fanVideo.loop       = true;
-      this._fanVideo.muted      = true;
+      this._fanVideo.loop        = true;
+      this._fanVideo.muted       = true;
       this._fanVideo.playsInline = true;
       this._fanVideo.play().catch(() => {});
     }
 
-    // Fan hitbox
-// Fan hitbox (исправленный)
-if (this._fanBtn) {
-    // Используем свойства объекта, чтобы избежать ошибок объявления переменных
-    this._fanTouchData = {
-        startY: 0,
-        startX: 0,
-        isMoving: false
-    };
+    // Fan hitbox — tap to toggle, ignore swipes
+    if (this._fanBtn) {
+      this._fanTouchData = { startY: 0, startX: 0, isMoving: false };
 
-    this._fanBtn.addEventListener('touchstart', (e) => {
+      this._fanBtn.addEventListener('touchstart', (e) => {
         const t = e.touches[0];
-        this._fanTouchData.startY = t.clientY;
-        this._fanTouchData.startX = t.clientX;
-        this._fanTouchData.isMoving = false;
-        // НЕ прерываем событие, чтобы основной свайп камер его поймал
-    }, { passive: true });
+        this._fanTouchData.startY    = t.clientY;
+        this._fanTouchData.startX    = t.clientX;
+        this._fanTouchData.isMoving  = false;
+      }, { passive: true });
 
-    this._fanBtn.addEventListener('touchmove', (e) => {
-        const t = e.touches[0];
+      this._fanBtn.addEventListener('touchmove', (e) => {
+        const t  = e.touches[0];
         const dy = Math.abs(t.clientY - this._fanTouchData.startY);
         const dx = Math.abs(t.clientX - this._fanTouchData.startX);
+        if (dy > 15 || dx > 15) this._fanTouchData.isMoving = true;
+      }, { passive: true });
 
-        // Если сдвиг больше 15 пикселей — это точно свайп, отключаем вентилятор
-        if (dy > 15 || dx > 15) {
-            this._fanTouchData.isMoving = true;
-        }
-    }, { passive: true });
-
-    this._fanBtn.addEventListener('touchend', (e) => {
-        // Если движения не было (чистый тап) — переключаем вентилятор
+      this._fanBtn.addEventListener('touchend', (e) => {
         if (!this._fanTouchData.isMoving) {
-            // Проверяем, существует ли метод, чтобы не поймать TypeError
-            if (typeof this._toggleFan === 'function') {
-                this._toggleFan();
-            }
-            // Предотвращаем клик-фантом, но только если это не был свайп
-            if (e.cancelable) e.preventDefault();
+          this._toggleFan();
+          if (e.cancelable) e.preventDefault();
         }
-    }, { passive: false });
+      }, { passive: false });
 
-    // Обработка для мышки (ПК), чтобы не сломать клик на десктопе
-    this._fanBtn.addEventListener('click', (e) => {
-        // e.detail === 0 обычно означает эмуляцию тача, пропускаем её
-        if (e.detail !== 0) {
-            this._toggleFan();
-        }
-    });
-}
+      this._fanBtn.addEventListener('click', (e) => {
+        if (e.detail !== 0) this._toggleFan();
+      });
+    }
 
     // Nose hitbox
     if (this._noseBtn) {
@@ -103,10 +86,7 @@ if (this._fanBtn) {
           e.preventDefault();
         }, { passive: false })
       );
-      this._noseBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        this._honk();
-      });
+      this._noseBtn.addEventListener('click',    e => { e.stopPropagation(); this._honk(); });
       this._noseBtn.addEventListener('touchend', e => {
         e.stopPropagation();
         e.preventDefault();
@@ -114,13 +94,11 @@ if (this._fanBtn) {
       }, { passive: false });
     }
 
-    // Load audio buffers immediately (warning modal already clicked = user gesture done)
     this._loadAudio();
 
     // Start ambience only when the OFFICE phase begins
     EventBus.on('phaseChange', (phase) => {
       if (phase === 'OFFICE' && this._fanOn) {
-        // Small delay so the intro animation finishes before sound
         setTimeout(() => this._startAmbience(), 100);
       }
       if (phase === 'GAME_OVER' || phase === 'WIN' || phase === 'POWER_OUT') {
@@ -129,7 +107,7 @@ if (this._fanBtn) {
     });
   }
 
-  // ── Load buffers via Web Audio API ────────────────────────────
+  // ── Load buffers ───────────────────────────────────────────────
   _loadAudio() {
     try {
       this._actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -140,7 +118,8 @@ if (this._fanBtn) {
 
     if (this._actx.state === 'suspended') this._actx.resume().catch(() => {});
 
-    const load = (url) => fetch(url).then(r => r.arrayBuffer()).then(ab => this._actx.decodeAudioData(ab));
+    const load = (url) =>
+      fetch(url).then(r => r.arrayBuffer()).then(ab => this._actx.decodeAudioData(ab));
 
     load('assets/sounds/ambience.mp3')
       .then(buf => { this._ambBuf = buf; this._audioReady = true; })
@@ -151,20 +130,20 @@ if (this._fanBtn) {
       .catch(() => {});
   }
 
-  // ── Ambience: start (only one instance ever runs) ─────────────
+  // ── Ambience: start ────────────────────────────────────────────
   _startAmbience() {
     if (!this._actx || !this._ambBuf) return;
-    if (this._ambNode) return;  // already playing — do NOT create a second one
+    if (this._ambNode) return;
 
     if (this._actx.state === 'suspended') this._actx.resume().catch(() => {});
 
     this._ambGain = this._actx.createGain();
-    this._ambGain.gain.value = 0.10;   // quiet background hum
+    this._ambGain.gain.value = 0.10;
     this._ambGain.connect(this._actx.destination);
 
     this._ambNode = this._actx.createBufferSource();
     this._ambNode.buffer = this._ambBuf;
-    this._ambNode.loop   = true;  // gap-free loop
+    this._ambNode.loop   = true;
     this._ambNode.connect(this._ambGain);
     this._ambNode.start(0);
   }
@@ -172,7 +151,7 @@ if (this._fanBtn) {
   // ── Ambience: stop ────────────────────────────────────────────
   _stopAmbience() {
     if (this._ambNode) {
-      try { this._ambNode.stop(); } catch (_) {}
+      try { this._ambNode.stop(); }      catch (_) {}
       try { this._ambNode.disconnect(); } catch (_) {}
       this._ambNode = null;
     }
@@ -183,7 +162,15 @@ if (this._fanBtn) {
   }
 
   // ── Fan toggle ────────────────────────────────────────────────
+  /**
+   * Blocked when power === 0.
+   * The fan has no electricity — it cannot spin.
+   * Attempting to turn it on when dead is silently ignored.
+   */
   _toggleFan() {
+    // Cannot turn the fan ON without power
+    if (!this._fanOn && this.state.power <= 0) return;
+
     this._fanOn = !this._fanOn;
 
     if (this._fanOn) {
@@ -191,7 +178,6 @@ if (this._fanBtn) {
         this._fanVideo.style.display = 'block';
         this._fanVideo.play().catch(() => {});
       }
-      // Only start sound if we're in the office (game is playing)
       if (this.state.isPlaying()) this._startAmbience();
     } else {
       if (this._fanVideo) {
@@ -221,19 +207,17 @@ if (this._fanBtn) {
     }
   }
 
-  // ── Public API (called from main.js) ─────────────────────────
+  // ── Public API ────────────────────────────────────────────────
 
-  /** Stop ambience — called on power-out or game-over */
   stopAmbience() { this._stopAmbience(); }
 
-  /** Resume after night restart (called by 'nightStarted' event) */
   resumeIfOn() {
     if (!this._fanOn) return;
     if (this._fanVideo) {
       this._fanVideo.style.display = 'block';
       this._fanVideo.play().catch(() => {});
     }
-    // Don't start audio here — phaseChange → OFFICE will trigger it
+    // Audio is restarted by 'phaseChange' → 'OFFICE' event
   }
 
   get fanOn() { return this._fanOn; }

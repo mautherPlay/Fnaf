@@ -3,8 +3,25 @@
 /**
  * SceneRenderer — STATE → SINGLE SCENE IMAGE
  *
- * CAM 7 (Bathrooms) added: chica and freddy can appear there.
+ * CAM 7 (Bathrooms): chica and freddy can appear there.
  * Camera filter brightness raised from 0.6 → 0.72 (less dark).
+ *
+ * Power-out visual:
+ *   Renders INSIDE #office-view / #scene-background (the same 1920 px
+ *   scrollable container used during normal play) so the player can
+ *   still pan left/right.  #power-out-view is never shown.
+ *
+ *   state.powerOutFreddyEyes (toggled by PowerSystem's eye-flicker timer):
+ *     false → backup_power.png           ("OfficeNoLight"       — pitch dark)
+ *     true  → power_out_freddy_left.png  ("OfficeNoLightFreddy" — eyes visible)
+ *
+ *   During POWER_OUT:
+ *     • Door/light PANEL BUTTONS stay visible.  OfficeSystem already plays
+ *       error_buzz and returns early when power === 0, so no extra hiding needed.
+ *     • The camera trigger zone (raise tablet) stays visible but InputSystem
+ *       blocks its use because isPlaying() is false during POWER_OUT.
+ *     • Only the fan VIDEO is hidden (no electricity = no spinning fan).
+ *       FanSystem re-shows it on the next night via resumeIfOn().
  */
 class SceneRenderer {
   constructor(state) {
@@ -20,8 +37,8 @@ class SceneRenderer {
     this.$static        = document.getElementById('camera-static');
     this.$kitchenOverlay= document.getElementById('cam-kitchen-disabled');
 
+    // Legacy overlay — kept for safety but never shown
     this.$powerView     = document.getElementById('power-out-view');
-    this.$powerImg      = document.getElementById('power-out-image');
 
     this.$panelLeftImg  = document.getElementById('panel-left-img');
     this.$panelRightImg = document.getElementById('panel-right-img');
@@ -29,12 +46,16 @@ class SceneRenderer {
     this.$jumpOverlay   = document.getElementById('jumpscare-overlay');
     this.$jumpVideo     = document.getElementById('jumpscare-video');
 
+    // Only the fan video is managed here during power-out
+    this._$fanVideo = document.getElementById('fan-video');
+
     this._lastOfficeImg    = '';
     this._lastCamImg       = '';
     this._lastPanelL       = '';
     this._lastPanelR       = '';
     this._foxyVideoPlaying = false;
     this._jumpActive       = false;
+    this._fanHiddenByUs    = false; // true only when WE hid it
 
     if (this.$camFoxyVideo) {
       this.$camFoxyVideo.src   = `${CONFIG.ASSETS.VIDEOS}cam2a_foxy_running.mp4`;
@@ -42,6 +63,9 @@ class SceneRenderer {
       this.$camFoxyVideo.muted = true;
       this.$camFoxyVideo.style.display = 'none';
     }
+
+    // Ensure the legacy overlay is always hidden
+    if (this.$powerView) this.$powerView.style.display = 'none';
   }
 
   update() {
@@ -57,7 +81,11 @@ class SceneRenderer {
     if (s.phase === 'JUMPSCARE') { this._showJumpscare(); return; }
     if (this._jumpActive)          this._hideJumpscare();
 
+    // Power-out is drawn inside office-view (not a separate overlay)
     if (s.phase === 'POWER_OUT') { this._showPowerOut(); return; }
+
+    // Leaving power-out: restore fan if we hid it
+    this._restoreFan();
 
     if (s.cameraOpen && s.phase === 'CAMERA') { this._showCameraMode(); return; }
     this._showOfficeMode();
@@ -66,15 +94,14 @@ class SceneRenderer {
   _hideAllLayers() {
     if (this.$officeView) this.$officeView.style.display = 'none';
     if (this.$cameraView) this.$cameraView.style.display = 'none';
-    if (this.$powerView)  this.$powerView.style.display  = 'none';
     this._stopFoxyVideo();
+    this._restoreFan();
   }
 
-  // ── Office ───────────────────────────────────────────────────
+  // ── Office (normal play) ─────────────────────────────────────
   _showOfficeMode() {
     this.$officeView.style.display = 'block';
     this.$cameraView.style.display = 'none';
-    this.$powerView.style.display  = 'none';
     this._stopFoxyVideo();
 
     const img = this._getOfficeImage();
@@ -100,25 +127,56 @@ class SceneRenderer {
   }
 
   // ── Power-out ─────────────────────────────────────────────────
+  /**
+   * Reuses #office-view / #scene-background so panning works normally.
+   *
+   * What stays visible:
+   *   • Door/light panel buttons — OfficeSystem handles the no-power
+   *     error_buzz logic; no extra hiding needed here.
+   *   • Camera trigger zone — InputSystem blocks it (isPlaying()===false).
+   *   • Nose hitbox — harmless.
+   *
+   * What gets hidden:
+   *   • Fan video only — no electricity, no spinning fan.
+   *     FanSystem will restore it on the next night via resumeIfOn().
+   */
   _showPowerOut() {
-    this.$officeView.style.display = 'none';
+    this.$officeView.style.display = 'block';
     this.$cameraView.style.display = 'none';
-    this.$powerView.style.display  = 'block';
     this._stopFoxyVideo();
+    this._hideFan();
 
-    const O = CONFIG.ASSETS.OFFICE;
-    const img = (this.state.powerOutPhase >= 3 &&
-                 this.state.animatronics.freddy.position === 'IN_OFFICE')
-      ? O + 'power_out_freddy_left.png'
-      : O + 'backup_power.png';
-    if (this.$powerImg) this.$powerImg.src = img;
+    const O   = CONFIG.ASSETS.OFFICE;
+    const img = this.state.powerOutFreddyEyes
+      ? O + 'power_out_freddy_left.png'   // eyes visible
+      : O + 'backup_power.png';           // pitch dark
+
+    if (img !== this._lastOfficeImg) {
+      if (this.$sceneImg) this.$sceneImg.src = img;
+      this._lastOfficeImg = img;
+    }
+
+    this._applyPan();
+  }
+
+  // ── Fan helpers (only thing hidden during power-out) ──────────
+  _hideFan() {
+    if (this._fanHiddenByUs) return;
+    this._fanHiddenByUs = true;
+    if (this._$fanVideo) this._$fanVideo.style.display = 'none';
+  }
+
+  _restoreFan() {
+    // We deliberately do NOT restore fan video here.
+    // FanSystem manages its own visibility via resumeIfOn() on night start.
+    // All we do is clear the flag so _hideFan() can run again next power-out.
+    this._fanHiddenByUs = false;
   }
 
   // ── Camera mode ───────────────────────────────────────────────
   _showCameraMode() {
     this.$officeView.style.display = 'none';
     this.$cameraView.style.display = 'block';
-    this.$powerView.style.display  = 'none';
 
     const isKitchen    = this.state.activeCam === '6';
     const isFoxyRunCam = this.state.activeCam === '2A' &&
@@ -202,9 +260,8 @@ class SceneRenderer {
         if (a.bonnie.position==='BACKSTAGE') return C+'cam5_bonnie.png';
         return C+'cam5_empty.png';
       case '6':
-        return ''; // kitchen: handled by disabled overlay
+        return '';
       case '7':
-        // Bathrooms — Chica and Freddy can appear here
         if (a.freddy.position==='BATHROOMS') return C+'cam7_freddy.png';
         if (a.chica.position ==='BATHROOMS') return C+'cam7_chica.png';
         return C+'cam7_empty.png';
