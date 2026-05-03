@@ -120,10 +120,12 @@ class UIManager {
     const hud = document.getElementById('hud');
     const ot  = document.getElementById('office-trigger-zone');
     const ct  = document.getElementById('cam-trigger-zone');
-    const isPlay = phase === 'OFFICE' || phase === 'CAMERA';
 
-    if (hud) hud.style.display = isPlay ? 'block' : 'none';
+    // HUD (время + ночь + энергия) видно во время игры И во время power-out
+    const showHud = phase === 'OFFICE' || phase === 'CAMERA' || phase === 'POWER_OUT';
+    if (hud) hud.style.display = showHud ? 'block' : 'none';
 
+    // Триггерные зоны (планшет) — только во время обычной игры
     if (phase === 'OFFICE') {
       if (ot) ot.style.display = 'flex';
       if (ct) ct.style.display = 'none';
@@ -131,6 +133,7 @@ class UIManager {
       if (ot) ot.style.display = 'none';
       if (ct) ct.style.display = 'flex';
     } else {
+      // POWER_OUT, JUMPSCARE, GAME_OVER, WIN — планшет недоступен
       if (ot) ot.style.display = 'none';
       if (ct) ct.style.display = 'none';
     }
